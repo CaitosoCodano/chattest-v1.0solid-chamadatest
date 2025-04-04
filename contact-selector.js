@@ -288,11 +288,21 @@ document.addEventListener('DOMContentLoaded', function() {
             callUI.remove();
         });
 
-        // Simular chamada rejeitada após 3 segundos
-        setTimeout(() => {
-            alert('Nenhum contato atendeu a chamada');
-            callUI.remove();
-        }, 3000);
+        // Variável para controlar se algum contato atendeu a chamada
+        window.groupCallAnswered = false;
+
+        // Configurar temporizador para verificar se algum contato atendeu a chamada
+        window.groupCallTimeoutTimer = setTimeout(() => {
+            // Verificar se algum contato atendeu a chamada
+            if (!window.groupCallAnswered) {
+                alert('Nenhum contato atendeu a chamada');
+                callUI.remove();
+
+                // Limpar variáveis globais
+                window.groupCallAnswered = false;
+                window.groupCallTimeoutTimer = null;
+            }
+        }, 10000); // 10 segundos
 
         // Ocultar seletor de contatos
         hideContactSelector();

@@ -75,6 +75,14 @@ function registerSimpleWebRTCEvents(io, socket, connectedUsers) {
                 targetUserId,
                 message: 'Chamada conectada com sucesso'
             });
+
+            // Notificar todos os sockets que uma chamada em grupo foi atendida
+            // Isso é usado para evitar a mensagem "Nenhum contato atendeu a chamada"
+            io.emit('groupCallAnswered', {
+                accepterId,
+                callerId: targetUserId
+            });
+            console.log(`Notificação de chamada em grupo atendida enviada para todos os sockets`);
         } else {
             // Chamador não está mais online
             socket.emit('callFailed', {

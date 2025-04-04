@@ -376,6 +376,20 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Chamada encerrada pelo outro usuário');
             endCall();
         });
+
+        // Evento para chamada em grupo atendida
+        window.socket.on('groupCallAnswered', (data) => {
+            console.log('Chamada em grupo atendida:', data);
+
+            // Marcar a chamada em grupo como atendida
+            if (window.groupCallTimeoutTimer) {
+                console.log('Cancelando temporizador de timeout da chamada em grupo');
+                clearTimeout(window.groupCallTimeoutTimer);
+                window.groupCallTimeoutTimer = null;
+            }
+
+            window.groupCallAnswered = true;
+        });
     }
 
     // Expor função globalmente

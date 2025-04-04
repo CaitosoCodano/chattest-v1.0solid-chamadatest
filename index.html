@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <!-- Adicionar Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Adicionar CSS do modo escuro -->
+    <link rel="stylesheet" href="dark-mode.css">
+    <!-- Adicionar CSS do menu do chat -->
+    <link rel="stylesheet" href="chat-menu.css">
+    <!-- Adicionar CSS para mensagens em diferentes temas -->
+    <link rel="stylesheet" href="theme-messages.css">
+    <!-- Adicionar CSS para corrigir problemas de contatos -->
+    <link rel="stylesheet" href="contact-fix.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Seção esquerda - Lista de contatos -->
+        <div class="left-section">
+            <!-- Sidebar do perfil -->
+            <div class="profile-sidebar">
+                <div class="profile-avatar">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" alt="Profile" id="profileAvatar">
+                    <span id="profileUsername">Meu Perfil</span>
+                    <!-- Status removido -->
+                </div>
+                <div class="profile-actions">
+                    <button id="darkModeBtn" class="sidebar-btn dark-mode-btn" title="Alternar modo escuro">
+                        <i class="fas fa-moon"></i>
+                        <span>Modo Escuro</span>
+                    </button>
+                    <button id="logoutBtn" class="sidebar-btn logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Lista de contatos -->
+            <div class="contacts-list" id="contactsList">
+                <!-- Lista será preenchida dinamicamente via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Seção central - Chat -->
+        <div class="chat-section">
+            <!-- Tela de boas-vindas do sistema -->
+            <div class="system-welcome" id="systemWelcome">
+                <div class="welcome-header">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=ChatApp" alt="Chat App">
+                    <h2>Bem-vindo ao Chat App!</h2>
+                </div>
+                <div class="welcome-content">
+                    <div class="welcome-card">
+                        <h3>🚀 Novidades da versão 1.0</h3>
+                        <ul>
+                            <li>✅ Sistema de login e registro</li>
+                            <li>✅ Chat em tempo real</li>
+                            <li>✅ Status de usuário (online, ausente, offline)</li>
+                            <li>✅ Contador de mensagens não lidas</li>
+                            <li>✅ Persistência de mensagens</li>
+                            <li>✅ Notificações de novas mensagens</li>
+                        <li>✅ Modo escuro</li>
+                        <li>✅ Indicador de digitação</li>
+                        </ul>
+                    </div>
+                    <div class="welcome-card">
+                        <h3>💬 Como usar</h3>
+                        <p>Selecione um contato na lista à esquerda para iniciar uma conversa.</p>
+                        <p>As mensagens não lidas serão indicadas por um contador vermelho.</p>
+                        <p>Seu status é definido automaticamente com base na sua atividade.</p>
+                        <p>Clique no ícone de lua/sol para alternar entre o modo claro e escuro.</p>
+                        <p>Quando alguém está digitando, você verá um indicador na conversa.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tela de boas-vindas antiga (agora oculta) -->
+            <div class="welcome-screen" id="welcomeScreen" style="display: none;">
+                <div class="welcome-content">
+                    <i class="fas fa-comments welcome-icon"></i>
+                    <h1>Bem-vindo ao Chat</h1>
+                    <p>Selecione um contato para iniciar uma conversa</p>
+                </div>
+            </div>
+
+            <!-- Área de chat ativa (inicialmente oculta) -->
+            <div class="active-chat" id="activeChat" style="display: none;">
+                <div class="chat-header" id="chatHeader">
+                    <!-- Preenchido dinamicamente -->
+                </div>
+                <div class="chat-menu">
+                    <button id="chatMenuBtn" class="chat-menu-btn">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div id="chatMenuDropdown" class="chat-menu-dropdown">
+                        <ul>
+                            <li id="callBtn"><i class="fas fa-phone"></i> Iniciar chamada</li>
+                            <li id="clearChatBtn"><i class="fas fa-trash"></i> Limpar conversa</li>
+                            <li id="selectMessagesBtn"><i class="fas fa-check-square"></i> Selecionar mensagens</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Mensagens serão adicionadas aqui -->
+                    <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                        <div class="typing-text">Digitando</div>
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <textarea id="messageInput" placeholder="Digite sua mensagem..."></textarea>
+                    <button id="sendMessageBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de ações para mensagens selecionadas -->
+    <div class="selection-actions" id="selectionActions">
+        <div class="selection-count">0 mensagens selecionadas</div>
+        <div class="selection-buttons">
+            <button id="cancelSelectionBtn">Cancelar</button>
+            <button id="deleteSelectedBtn" class="delete-selected">Excluir</button>
+        </div>
+    </div>
+
+    <!-- Modal de status removido -->
+
+<!-- Adicionar o menu flutuante no final do body -->
+<div class="floating-menu" id="toolsMenu">
+    <div class="menu-header">
+        <h3>Ferramentas de Chat</h3>
+        <button class="close-btn" id="closeMenu">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div class="menu-section">
+        <h4>Gerenciar Mensagens</h4>
+        <button class="menu-btn">
+            <i class="fas fa-reply"></i>
+            <span>Responder Mensagem</span>
+        </button>
+        <button class="menu-btn">
+            <i class="fas fa-edit"></i>
+            <span>Editar Última Mensagem</span>
+        </button>
+        <button class="menu-btn">
+            <i class="fas fa-trash"></i>
+            <span>Apagar Mensagem</span>
+        </button>
+        <button class="menu-btn">
+            <i class="fas fa-quote-right"></i>
+            <span>Citar Mensagem</span>
+        </button>
+    </div>
+
+    <div class="menu-section">
+        <h4>Formatação</h4>
+        <button class="menu-btn">
+            <i class="fas fa-bold"></i>
+            <span>Negrito</span>
+        </button>
+        <button class="menu-btn">
+            <i class="fas fa-italic"></i>
+            <span>Itálico</span>
+        </button>
+        <button class="menu-btn">
+            <i class="fas fa-strikethrough"></i>
+            <span>Riscado</span>
+        </button>
+    </div>
+
+    <div class="menu-section">
+        <h4>Outras Ações</h4>
+        <button class="menu-btn warning">
+            <i class="fas fa-eraser"></i>
+            <span>Limpar Chat</span>
+        </button>
+        <button class="menu-btn">
+            <i class="fas fa-download"></i>
+            <span>Exportar Conversa</span>
+        </button>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Limpar qualquer conversa anterior com o Sistema
+    const lastChat = localStorage.getItem('lastChat') || sessionStorage.getItem('lastChat');
+    if (lastChat) {
+        try {
+            const user = JSON.parse(lastChat);
+            if (user.username === 'Sistema') {
+                console.log('Removendo conversa anterior com o Sistema');
+                localStorage.removeItem('lastChat');
+                sessionStorage.removeItem('lastChat');
+            }
+        } catch (error) {
+            console.error('Erro ao processar lastChat:', error);
+            localStorage.removeItem('lastChat');
+            sessionStorage.removeItem('lastChat');
+        }
+    }
+
+    // Verificar autenticação
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.token) {
+        // Redirecionar para a página de login se não estiver autenticado
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Disponibilizar userInfo globalmente
+    window.userInfo = userInfo;
+
+    // Configurar elementos da UI
+    const profileUsername = document.getElementById('profileUsername');
+    const profileAvatar = document.getElementById('profileAvatar');
+    const contactsList = document.getElementById('contactsList');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const activeChat = document.getElementById('activeChat');
+    const chatHeader = document.getElementById('chatHeader');
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+
+    // Variáveis para controle de status
+    let isTabActive = true;
+    let reconnectTimer = null;
+    let socket = null;
+
+    // Configurar informações do perfil
+    profileUsername.textContent = userInfo.username;
+    profileAvatar.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${userInfo.username}`;
+
+    // Variáveis para o chat
+    let currentChatUser = null;
+
+    // Armazenar contagens de mensagens não lidas
+    let unreadMessageCounts = {};
+
+    // Função para gerar avatar aleatório
+    function generateAvatar(username) {
+        // Garantir que sempre retornamos uma URL válida
+        return `https://api.dicebear.com/7.x/avataaars/svg?seed=${username || 'default'}`;
+    }
+
+    // Função para criar um elemento de contato
+    function createContactElement(user, unreadCount = 0) {
+        console.log(`Criando elemento de contato para ${user.username} com ${unreadCount} mensagens não lidas`);
+        const contact = document.createElement('div');
+        contact.className = 'contact';
+        contact.dataset.userId = user._id;
+        contact.dataset.username = user.username;
+
+        // Usar uma URL de avatar fixa baseada no nome de usuário
+        const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
+
+        // Adicionar o avatar ao objeto do usuário para uso futuro
+        user.avatarUrl = avatarUrl;
+
+        // Determinar o status do usuário
+        let statusClass = 'offline';
+        let statusText = 'Offline';
+        let statusIcon = '';
+
+        if (user.status) {
+            // Novo formato com campo status
+            statusClass = user.status;
+
+            if (user.status === 'online') {
+                statusText = 'Online';
+            } else if (user.status === 'away') {
+                statusText = 'Ausente';
+            } else if (user.status === 'busy') {
+                statusText = 'Ocupado';
+            } else if (user.status === 'invisible') {
+                statusText = 'Invisível';
+            } else if (user.status === 'custom' && user.customStatus) {
+                statusClass = 'custom';
+                statusIcon = user.customStatus.emoji || '✏️';
+                statusText = user.customStatus.text || 'Status personalizado';
+            } else {
+                statusText = 'Offline';
+            }
+        } else if (user.online !== undefined) {
+            // Compatibilidade com formato antigo
+            statusClass = user.online ? 'online' : 'offline';
+            statusText = user.online ? 'Online' : 'Offline';
+        }
+
+        contact.innerHTML = `
+            <img src="${avatarUrl}" alt="${user.username}">
+            <div class="contact-info">
+                <h3>${user.username}</h3>
+                <p class="status-text ${statusClass}">${statusText}</p>
+            </div>
+            <div class="contact-indicators">
+                <span class="status-indicator ${statusClass}">${statusClass === 'custom' ? statusIcon : ''}</span>
+                <span class="unread-badge" style="display: ${unreadCount > 0 ? 'flex' : 'none'}">${unreadCount}</span>
+            </div>
+        `;
+
+        // Adicionar evento de clique para iniciar chat - Implementação direta
+        contact.onclick = function() {
+            console.log(`Clique no contato ${user.username} (ID: ${user._id})`);
+            startChatWith(user);
+        };
+
+        return contact;
+    }
+
+    // Função para iniciar chat com um usuário
+    window.startChatWith = function(user) {
+        console.log(`Iniciando chat com ${user.username} (ID: ${user._id})`);
+        currentChatUser = user;
+
+        // Salvar a última conversa no localStorage para persistência
+        localStorage.setItem('lastChat', JSON.stringify(user));
+        // Também manter no sessionStorage para compatibilidade
+        sessionStorage.setItem('lastChat', JSON.stringify(user));
+
+        // Disparar evento personalizado para notificar que um chat foi iniciado
+        const chatStartedEvent = new CustomEvent('chatStarted', { detail: { user } });
+        document.dispatchEvent(chatStartedEvent);
+        console.log('Evento chatStarted disparado');
+
+        // Usar a URL de avatar armazenada ou gerar uma nova
+        const avatarUrl = user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
+
+        // Determinar o status do usuário
+        let statusClass = 'offline';
+        let statusText = 'Offline';
+
+        if (user.status) {
+            // Novo formato com campo status
+            statusClass = user.status;
+            if (user.status === 'online') {
+                statusText = 'Online';
+            } else if (user.status === 'away') {
+                statusText = 'Ausente';
+            } else {
+                statusText = 'Offline';
+            }
+        } else if (user.online !== undefined) {
+            // Compatibilidade com formato antigo
+            statusClass = user.online ? 'online' : 'offline';
+            statusText = user.online ? 'Online' : 'Offline';
+        }
+
+        // Atualizar cabeçalho do chat
+        chatHeader.innerHTML = `
+            <img src="${avatarUrl}" alt="${user.username}">
+            <div class="chat-user-info">
+                <h3>${user.username}</h3>
+                <div class="user-status-container">
+                    <span class="status-indicator ${statusClass}"></span>
+                    <p class="status-text ${statusClass}">${statusText}</p>
+                </div>
+            </div>
+            <div class="header-buttons">
+                <!-- Botões serão adicionados aqui pelo script -->
+            </div>
+        `;
+
+        // Adicionar o ID do usuário como atributo para facilitar a identificação
+        chatHeader.setAttribute('data-user-id', user._id);
+
+        // Mostrar área de chat e esconder telas de boas-vindas
+        welcomeScreen.style.display = 'none';
+        systemWelcome.style.display = 'none';
+        activeChat.style.display = 'flex';
+
+        // Limpar contador de mensagens não lidas
+        console.log(`Iniciando chat com ${user.username}, removendo contagem de mensagens não lidas`);
+        delete unreadMessageCounts[user._id];
+
+        // Atualizar o elemento na interface
+        const contactElement = contactsList.querySelector(`[data-user-id="${user._id}"]`);
+        if (contactElement) {
+            const unreadBadge = contactElement.querySelector('.unread-badge');
+            if (unreadBadge) {
+                unreadBadge.style.display = 'none';
+            }
+        }
+
+        // Carregar mensagens anteriores e marcá-las como lidas
+        loadMessages(user._id, true);
+    }
+
+    // Função para carregar mensagens
+    async function loadMessages(userId, markAsRead = false) {
+        console.log(`Carregando mensagens com o usuário ${userId}, marcar como lidas: ${markAsRead}`);
+
+        // Limpar mensagens anteriores e mostrar indicador de carregamento
+        chatMessages.innerHTML = '<div class="loading-messages">Carregando mensagens...</div>';
+
+        try {
+            // Adicionar parâmetro markAsRead à URL
+            const url = `/api/messages/${userId}?markAsRead=${markAsRead}`;
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${userInfo.token}`
+                }
+            });
+
+            if (response.ok) {
+                const messages = await response.json();
+                console.log(`Recebidas ${messages.length} mensagens do servidor`);
+
+                if (messages.length === 0) {
+                    console.log('Nenhuma mensagem encontrada');
+                    chatMessages.innerHTML = '<div class="no-messages">Nenhuma mensagem ainda. Diga olá!</div>';
+                } else {
+                    // Imprimir detalhes das mensagens para depuração
+                    messages.forEach((msg, index) => {
+                        console.log(`Mensagem ${index + 1}: De ${msg.sender.username} para ${msg.receiver.username}: ${msg.content.substring(0, 20)}...`);
+                    });
+
+                    displayMessages(messages);
+                }
+            } else {
+                console.error(`Erro ao carregar mensagens: ${response.status}`);
+                chatMessages.innerHTML = '<div class="error-message">Erro ao carregar mensagens. Tente novamente.</div>';
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            chatMessages.innerHTML = '<div class="error-message">Erro ao carregar mensagens. Tente novamente.</div>';
+        }
+    }
+
+    // Função para exibir mensagens
+    function displayMessages(messages) {
+        console.log(`Exibindo ${messages.length} mensagens`);
+        chatMessages.innerHTML = '';
+
+        // Ordenar mensagens por data (mais antigas primeiro)
+        const sortedMessages = [...messages].sort((a, b) =>
+            new Date(a.createdAt) - new Date(b.createdAt)
+        );
+
+        sortedMessages.forEach(message => {
+            const isMyMessage = message.sender._id === userInfo._id;
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${isMyMessage ? 'my-message' : 'other-message'}`;
+            messageElement.dataset.messageId = message._id;
+
+            // Usar uma URL de avatar fixa baseada no nome de usuário
+            const senderAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.sender.username}`;
+
+            // Formatar data e hora
+            const messageDate = new Date(message.createdAt);
+            const formattedTime = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const formattedDate = messageDate.toLocaleDateString();
+
+            messageElement.innerHTML = `
+                <img src="${senderAvatar}" alt="${message.sender.username}" class="message-avatar">
+                <div class="message-bubble">
+                    <div class="message-content">
+                        <p>${message.content}</p>
+                        <span class="message-time" title="${formattedDate}">${formattedTime}</span>
+                        ${message.read || isMyMessage ? '' : '<span class="read-status">Não lida</span>'}
+                    </div>
+                </div>
+            `;
+
+            chatMessages.appendChild(messageElement);
+        });
+
+        // Rolar para a última mensagem
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Função para enviar mensagem
+    function sendMessage() {
+        if (!currentChatUser || !messageInput.value.trim()) return;
+
+        const messageContent = messageInput.value.trim();
+
+        // Enviar mensagem via Socket.IO
+        socket.emit('sendMessage', {
+            receiverId: currentChatUser._id,
+            content: messageContent
+        });
+
+        // Limpar campo de entrada
+        messageInput.value = '';
+    }
+
+    // Evento de clique no botão de enviar
+    sendMessageBtn.addEventListener('click', sendMessage);
+
+    // Evento de tecla Enter para enviar mensagem
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Adicionar eventos para digitação
+    let typingTimeout;
+    messageInput.addEventListener('input', function() {
+        if (currentChatUser && socket) {
+            console.log('Enviando evento typing para', currentChatUser.username);
+            // Enviar evento de "está digitando"
+            socket.emit('typing', {
+                receiverId: currentChatUser._id
+            });
+
+            // Limpar o timeout anterior
+            clearTimeout(typingTimeout);
+
+            // Definir um novo timeout para parar de digitar após 2 segundos
+            typingTimeout = setTimeout(() => {
+                if (socket) {
+                    console.log('Enviando evento stopTyping para', currentChatUser.username);
+                    socket.emit('stopTyping', {
+                        receiverId: currentChatUser._id
+                    });
+                }
+            }, 2000);
+        }
+    });
+
+    // Adicionar evento para quando o usuário parar de digitar
+    messageInput.addEventListener('blur', function() {
+        if (currentChatUser && socket) {
+            console.log('Enviando evento stopTyping (blur) para', currentChatUser.username);
+            socket.emit('stopTyping', {
+                receiverId: currentChatUser._id
+            });
+            clearTimeout(typingTimeout);
+        }
+    });
+
+    // Adicionar evento para quando o usuário enviar uma mensagem
+    const sendButton = document.getElementById('sendButton');
+    if (sendButton) {
+        sendButton.addEventListener('click', function() {
+            if (currentChatUser && socket) {
+                console.log('Enviando evento stopTyping (send) para', currentChatUser.username);
+                socket.emit('stopTyping', {
+                    receiverId: currentChatUser._id
+                });
+                clearTimeout(typingTimeout);
+            }
+        });
+    }
+
+    // Evento de logout - Implementação direta
+    document.getElementById('logoutBtn').onclick = function() {
+        console.log('Botão de logout clicado');
+
+        // Desconectar socket
+        if (socket) {
+            socket.disconnect();
+        }
+
+        // Limpar dados da sessão
+        sessionStorage.removeItem('userInfo');
+        localStorage.removeItem('lastChat');
+
+        // Redirecionar para login
+        window.location.href = 'login.html';
+    };
+
+    // Detectar visibilidade da aba
+    document.addEventListener('visibilitychange', function() {
+        isTabActive = document.visibilityState === 'visible';
+
+        if (isTabActive) {
+            // Aba voltou a ficar visível
+            console.log('Aba ativa - reconectando...');
+            if (socket && socket.connected) {
+                // Informar ao servidor que o usuário está de volta
+                socket.emit('userReturned');
+            } else {
+                // Reconectar se o socket estiver desconectado
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+                connectSocket();
+            }
+        } else {
+            // Aba ficou invisível
+            console.log('Aba inativa');
+            // Não desconectar imediatamente, deixar o servidor lidar com isso
+        }
+    });
+
+    // Conectar ao Socket.IO
+    function connectSocket() {
+        // Limpar qualquer socket existente
+        if (socket) {
+            socket.disconnect();
+        }
+
+        socket = io();
+
+        // Disponibilizar o socket globalmente
+        window.socket = socket;
+
+        // Configurar reconexão automática
+        socket.on('disconnect', function() {
+            console.log('Desconectado do servidor');
+
+            // Tentar reconectar após 3 segundos se a aba estiver ativa
+            if (isTabActive && !reconnectTimer) {
+                reconnectTimer = setTimeout(function() {
+                    console.log('Tentando reconectar...');
+                    connectSocket();
+                    reconnectTimer = null;
+                }, 3000);
+            }
+        });
+
+        // Autenticar com o token JWT
+        socket.emit('authenticate', { token: userInfo.token });
+
+        // Resetar contagens de mensagens não lidas
+        unreadMessageCounts = {};
+
+        // Função para atualizar a lista de contatos
+        window.updateContactsList = function(users, unreadCounts = {}) {
+            // Limpar lista de contatos
+            contactsList.innerHTML = '';
+
+            console.log('Atualizando lista de contatos com:', users);
+            console.log('Atualizando lista de contatos com contagens:', unreadCounts);
+
+            // Atualizar contagens de mensagens não lidas
+            // Resetar contagens e adicionar apenas as novas
+            unreadMessageCounts = {};
+
+            // Adicionar apenas contagens válidas
+            for (const key in unreadCounts) {
+                if (unreadCounts[key] > 0) {
+                    unreadMessageCounts[key] = unreadCounts[key];
+                }
+            }
+
+            console.log('Contagens atualizadas:', unreadMessageCounts);
+
+            // Adicionar cada usuário à lista
+            const userList = Array.isArray(users) ? users : (users.users || []);
+            console.log('Lista de usuários processada:', userList);
+
+            if (userList.length === 0) {
+                console.log('Nenhum usuário encontrado na lista');
+                contactsList.innerHTML = '<div class="no-contacts">Nenhum usuário online</div>';
+                return;
+            }
+
+            // Adicionar cada usuário à lista
+            userList.forEach(user => {
+                // Não mostrar o próprio usuário na lista
+                if (user._id !== userInfo._id) {
+                    // Verificar se há mensagens não lidas deste usuário
+                    const unreadCount = unreadMessageCounts[user._id] || 0;
+                    const contactElement = createContactElement(user, unreadCount);
+                    contactsList.appendChild(contactElement);
+                }
+            });
+        }
+
+        // Receber lista inicial de usuários online com contagens de mensagens não lidas
+        socket.on('onlineUsers', (data) => {
+            console.log('Dados recebidos de onlineUsers:', data);
+            if (data.unreadCounts) {
+                console.log('Contagens de mensagens não lidas:', data.unreadCounts);
+            }
+            // Disponibilizar lista de usuários online globalmente
+            window.onlineUsers = data.users || data;
+
+            updateContactsList(data.users || data, data.unreadCounts || {});
+        });
+
+        // Receber atualizações da lista de usuários
+        socket.on('updateUsersList', (users) => {
+            // Atualizar lista global de usuários online
+            window.onlineUsers = users;
+
+            updateContactsList(users);
+        });
+
+        // Receber atualizações de mensagens não lidas
+        socket.on('unreadMessages', ({ userId, count }) => {
+            console.log(`Recebida atualização de mensagens não lidas de ${userId}: ${count}`);
+
+            // Atualizar contagem para este usuário apenas se for maior que zero
+            if (count > 0) {
+                unreadMessageCounts[userId] = count;
+            } else {
+                // Se a contagem for zero, remover a entrada
+                delete unreadMessageCounts[userId];
+            }
+
+            // Atualizar o elemento na interface
+            let contactElement = contactsList.querySelector(`[data-user-id="${userId}"]`);
+
+            // Se o contato não existir na lista, precisamos obter informações do usuário
+            if (!contactElement && count > 0) {
+                console.log(`Contato com ID ${userId} não encontrado, buscando informações do usuário...`);
+
+                // Buscar informações do usuário
+                fetch(`/api/users/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${userInfo.token}`
+                    }
+                })
+                .then(response => response.json())
+                .then(user => {
+                    console.log(`Informações do usuário recebidas:`, user);
+
+                    // Criar o elemento de contato
+                    contactElement = createContactElement(user, count);
+                    contactsList.appendChild(contactElement);
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar informações do usuário:', error);
+                });
+            } else if (contactElement) {
+                // Atualizar o contador no elemento existente
+                const unreadBadge = contactElement.querySelector('.unread-badge');
+                if (unreadBadge) {
+                    if (count > 0) {
+                        unreadBadge.textContent = count;
+                        unreadBadge.style.display = 'flex';
+                    } else {
+                        unreadBadge.style.display = 'none';
+                    }
+                }
+            }
+        });
+
+        // Evento quando um usuário se conecta
+        socket.on('userConnected', (userData) => {
+            console.log('Usuário conectado:', userData);
+
+            // Verificar se não é o próprio usuário
+            if (userInfo && userData.userId !== userInfo._id) {
+                // Solicitar lista atualizada de usuários online
+                socket.emit('requestOnlineUsers');
+            }
+        });
+
+        // Receber notificação de que as mensagens foram lidas
+        socket.on('messagesRead', ({ userId }) => {
+            console.log(`Mensagens lidas pelo usuário ${userId}`);
+            // Remover a contagem para este usuário
+            delete unreadMessageCounts[userId];
+
+            // Atualizar o elemento na interface
+            const contactElement = contactsList.querySelector(`[data-user-id="${userId}"]`);
+            if (contactElement) {
+                const unreadBadge = contactElement.querySelector('.unread-badge');
+                if (unreadBadge) {
+                    unreadBadge.style.display = 'none';
+                }
+            }
+        });
+
+        // Eventos de digitação
+        socket.on('userTyping', function(data) {
+            console.log('Recebido evento userTyping:', data);
+            if (currentChatUser && data.userId === currentChatUser._id) {
+                console.log('Mostrando indicador de digitação para', currentChatUser.username);
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.style.display = 'flex';
+                    // Garantir que o indicador seja visível rolando até ele
+                    typingIndicator.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
+
+        socket.on('userStoppedTyping', function(data) {
+            console.log('Recebido evento userStoppedTyping:', data);
+            if (currentChatUser && data.userId === currentChatUser._id) {
+                console.log('Ocultando indicador de digitação para', currentChatUser.username);
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.style.display = 'none';
+                }
+            }
+        });
+
+        // Receber atualizações de status de usuários
+        socket.on('statusUpdate', (data) => {
+            console.log('Recebida atualização de status:', data);
+
+            // Atualizar o status do usuário na lista de contatos
+            const contactElement = contactsList.querySelector(`[data-user-id="${data.userId}"]`);
+            if (contactElement) {
+                // Atualizar o indicador de status
+                const statusIndicator = contactElement.querySelector('.status-indicator');
+                if (statusIndicator) {
+                    // Remover classes anteriores
+                    statusIndicator.className = 'status-indicator';
+                    statusIndicator.textContent = '';
+
+                    // Aplicar classe de acordo com o status
+                    if (data.status === 'custom') {
+                        statusIndicator.className = 'status-indicator custom';
+                        // Adicionar emoji se disponível
+                        if (data.customStatus && data.customStatus.emoji) {
+                            statusIndicator.textContent = data.customStatus.emoji;
+                        } else {
+                            statusIndicator.textContent = '✏️';
+                        }
+                    } else {
+                        statusIndicator.className = `status-indicator ${data.status}`;
+                    }
+                }
+
+                // Atualizar o texto de status
+                const statusText = contactElement.querySelector('.status-text');
+                if (statusText) {
+                    // Remover classes anteriores
+                    statusText.className = 'status-text';
+
+                    // Aplicar classe de acordo com o status
+                    if (data.status === 'custom') {
+                        statusText.className = 'status-text custom';
+                        // Adicionar texto se disponível
+                        if (data.customStatus && data.customStatus.text) {
+                            statusText.textContent = data.customStatus.text;
+                        } else {
+                            statusText.textContent = 'Status personalizado';
+                        }
+                    } else {
+                        statusText.className = `status-text ${data.status}`;
+
+                        // Definir texto de acordo com o status
+                        switch (data.status) {
+                            case 'online':
+                                statusText.textContent = 'Online';
+                                break;
+                            case 'away':
+                                statusText.textContent = 'Ausente';
+                                break;
+                            case 'busy':
+                                statusText.textContent = 'Ocupado';
+                                break;
+                            case 'invisible':
+                                statusText.textContent = 'Invisível';
+                                break;
+                            case 'offline':
+                                statusText.textContent = 'Offline';
+                                break;
+                            default:
+                                statusText.textContent = 'Offline';
+                                break;
+                        }
+                    }
+                }
+
+                // Atualizar o objeto do usuário no elemento
+                const userData = JSON.parse(contactElement.dataset.user || '{}');
+                userData.status = data.status;
+                if (data.status === 'custom' && data.customStatus) {
+                    userData.customStatus = data.customStatus;
+                }
+                contactElement.dataset.user = JSON.stringify(userData);
+
+                // Atualizar o usuário atual no chat se for o mesmo
+                if (currentChatUser && currentChatUser._id === data.userId) {
+                    currentChatUser.status = data.status;
+                    if (data.status === 'custom' && data.customStatus) {
+                        currentChatUser.customStatus = data.customStatus;
+                    }
+
+                    // Atualizar o cabeçalho do chat
+                    updateChatHeader(currentChatUser);
+                }
+            }
+        });
+
+        // Receber atualização de contagem de mensagens não lidas quando o destinatário está offline ou ausente
+        socket.on('updateUnreadCount', ({ receiverId, senderId, count }) => {
+            console.log(`Recebida atualização de contagem para usuário ausente: ${receiverId} de ${senderId}: ${count}`);
+
+            // Verificar se somos o destinatário
+            if (receiverId === userInfo._id) {
+                console.log(`Atualizando contagem de mensagens não lidas para ${senderId}: ${count}`);
+
+                // Atualizar contagem para este usuário
+                unreadMessageCounts[senderId] = count;
+
+                // Atualizar o elemento na interface
+                let contactElement = contactsList.querySelector(`[data-user-id="${senderId}"]`);
+
+                // Se o contato não existir na lista, precisamos obter informações do usuário
+                if (!contactElement && count > 0) {
+                    console.log(`Contato com ID ${senderId} não encontrado, buscando informações do usuário...`);
+
+                    // Buscar informações do usuário
+                    fetch(`/api/users/${senderId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${userInfo.token}`
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(user => {
+                        console.log(`Informações do usuário recebidas:`, user);
+
+                        // Criar o elemento de contato
+                        contactElement = createContactElement(user, count);
+                        contactsList.appendChild(contactElement);
+                    })
+                    .catch(error => {
+                        console.error('Erro ao buscar informações do usuário:', error);
+                    });
+                } else if (contactElement) {
+                    // Atualizar o contador no elemento existente
+                    const unreadBadge = contactElement.querySelector('.unread-badge');
+                    if (unreadBadge) {
+                        if (count > 0) {
+                            unreadBadge.textContent = count;
+                            unreadBadge.style.display = 'flex';
+                        } else {
+                            unreadBadge.style.display = 'none';
+                        }
+                    }
+                }
+            }
+        });
+
+        // Receber notificação de que uma conversa foi limpa
+        socket.on('conversationCleared', ({ userId, deletedCount }) => {
+            console.log(`Conversa com ${userId} foi limpa. ${deletedCount} mensagens excluídas.`);
+
+            // Verificar se é a conversa atual
+            if (currentChatUser && currentChatUser._id === userId) {
+                console.log('Limpando conversa atual na interface');
+
+                // Limpar mensagens na interface
+                chatMessages.innerHTML = '<div class="no-messages">Nenhuma mensagem ainda. Diga olá!</div>';
+            }
+        });
+
+        // Novo usuário conectado
+        socket.on('userConnected', (user) => {
+            // Verificar se o usuário já está na lista
+            const existingContact = contactsList.querySelector(`[data-user-id="${user.userId}"]`);
+
+            if (existingContact) {
+                // Atualizar status
+                existingContact.querySelector('.status-indicator').classList.remove('offline');
+                existingContact.querySelector('.status-indicator').classList.add('online');
+                const statusText = existingContact.querySelector('.status-text');
+                statusText.textContent = 'Online';
+                statusText.classList.remove('offline');
+                statusText.classList.add('online');
+
+                // Se estamos em um chat com este usuário, atualizar o cabeçalho
+                if (currentChatUser && currentChatUser._id === user.userId) {
+                    const headerStatusIndicator = chatHeader.querySelector('.status-indicator');
+                    const headerStatusText = chatHeader.querySelector('.status-text');
+
+                    headerStatusIndicator.classList.remove('offline');
+                    headerStatusIndicator.classList.add('online');
+                    headerStatusText.textContent = 'Online';
+                    headerStatusText.classList.remove('offline');
+                    headerStatusText.classList.add('online');
+
+                    // Atualizar o objeto do usuário atual
+                    currentChatUser.online = true;
+                }
+            } else if (user.userId !== userInfo._id) {
+                // Garantir que temos um avatar
+                const avatar = user.avatar || generateAvatar(user.username);
+
+                // Adicionar novo contato
+                const contactElement = createContactElement({
+                    _id: user.userId,
+                    username: user.username,
+                    avatar: avatar,
+                    online: true
+                });
+                contactsList.appendChild(contactElement);
+            }
+        });
+
+        // Manipulador para mudanças de status de usuários
+        socket.on('userStatusChanged', ({ userId, status }) => {
+            const contactElement = contactsList.querySelector(`[data-user-id="${userId}"]`);
+            if (contactElement) {
+                // Atualizar status na lista de contatos
+                const statusIndicator = contactElement.querySelector('.status-indicator');
+                const statusText = contactElement.querySelector('.status-text');
+
+                // Remover todas as classes de status
+                statusIndicator.classList.remove('online', 'offline', 'away');
+                statusText.classList.remove('online', 'offline', 'away');
+
+                // Adicionar a classe correta
+                statusIndicator.classList.add(status);
+                statusText.classList.add(status);
+
+                // Atualizar o texto
+                if (status === 'online') {
+                    statusText.textContent = 'Online';
+                } else if (status === 'away') {
+                    statusText.textContent = 'Ausente';
+                } else {
+                    statusText.textContent = 'Offline';
+                }
+
+                // Se estamos em um chat com este usuário, atualizar o cabeçalho
+                if (currentChatUser && currentChatUser._id === userId) {
+                    const headerStatusIndicator = chatHeader.querySelector('.status-indicator');
+                    const headerStatusText = chatHeader.querySelector('.status-text');
+
+                    // Remover todas as classes de status
+                    headerStatusIndicator.classList.remove('online', 'offline', 'away');
+                    headerStatusText.classList.remove('online', 'offline', 'away');
+
+                    // Adicionar a classe correta
+                    headerStatusIndicator.classList.add(status);
+                    headerStatusText.classList.add(status);
+
+                    // Atualizar o texto
+                    if (status === 'online') {
+                        headerStatusText.textContent = 'Online';
+                    } else if (status === 'away') {
+                        headerStatusText.textContent = 'Ausente';
+                    } else {
+                        headerStatusText.textContent = 'Offline';
+                    }
+
+                    // Atualizar o objeto do usuário atual
+                    currentChatUser.status = status;
+                }
+            }
+        });
+
+        // Para compatibilidade com versões anteriores
+        socket.on('userDisconnected', ({ userId }) => {
+            socket.emit('userStatusChanged', { userId, status: 'offline' });
+        });
+
+        // Receber nova mensagem
+        socket.on('newMessage', (message) => {
+            console.log('Nova mensagem recebida:', message);
+
+            // Mostrar notificação para o usuário
+            const senderName = message.sender.username;
+            const notificationText = `Nova mensagem de ${senderName}: ${message.content}`;
+
+            // Criar notificação visual
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <strong>${senderName}</strong>: ${message.content}
+                </div>
+            `;
+            document.body.appendChild(notification);
+
+            // Remover notificação após 5 segundos
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                setTimeout(() => {
+                    notification.remove();
+                }, 500);
+            }, 5000);
+
+            // Se estamos no chat com o remetente, adicionar a mensagem
+            if (currentChatUser && message.sender._id === currentChatUser._id) {
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message other-message';
+
+                // Usar uma URL de avatar fixa baseada no nome de usuário
+                const senderAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.sender.username}`;
+
+                messageElement.innerHTML = `
+                    <img src="${senderAvatar}" alt="${message.sender.username}" class="message-avatar">
+                    <div class="message-bubble">
+                        <div class="message-content">
+                            <p>${message.content}</p>
+                            <span class="message-time">${new Date(message.createdAt).toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                `;
+
+                chatMessages.appendChild(messageElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } else {
+                // Se não estamos no chat com o remetente, atualizar a contagem de mensagens não lidas
+                const senderId = message.sender._id;
+                unreadMessageCounts[senderId] = (unreadMessageCounts[senderId] || 0) + 1;
+
+                // Atualizar o elemento na interface
+                let contactElement = contactsList.querySelector(`[data-user-id="${senderId}"]`);
+
+                // Se o contato não existir na lista, criá-lo
+                if (!contactElement) {
+                    console.log(`Criando novo contato para ${message.sender.username} (ID: ${senderId})`);
+
+                    // Criar o elemento de contato
+                    contactElement = createContactElement(message.sender, unreadMessageCounts[senderId]);
+                    contactsList.appendChild(contactElement);
+                } else {
+                    // Atualizar o contador no elemento existente
+                    const unreadBadge = contactElement.querySelector('.unread-badge');
+                    if (unreadBadge) {
+                        unreadBadge.textContent = unreadMessageCounts[senderId];
+                        unreadBadge.style.display = 'flex';
+                    }
+                }
+            }
+        });
+
+        // Mensagem enviada com sucesso
+        socket.on('messageSent', (message) => {
+            // Adicionar mensagem ao chat
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message my-message';
+
+            // Usar uma URL de avatar fixa baseada no nome de usuário
+            const myAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${userInfo.username}`;
+
+            messageElement.innerHTML = `
+                <img src="${myAvatar}" alt="${userInfo.username}" class="message-avatar">
+                <div class="message-bubble">
+                    <div class="message-content">
+                        <p>${message.content}</p>
+                        <span class="message-time">${new Date(message.createdAt).toLocaleTimeString()}</span>
+                    </div>
+                </div>
+            `;
+
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+
+        // Erro de autenticação
+        socket.on('authError', (error) => {
+            console.error('Erro de autenticação:', error);
+            alert('Erro de autenticação. Por favor, faça login novamente.');
+            sessionStorage.removeItem('userInfo');
+            window.location.href = 'login.html';
+        });
+    }
+
+    // Função para inicializar a interface
+    function initializeUI() {
+        // Exibir informações do usuário
+        profileUsername.textContent = userInfo.username;
+        profileAvatar.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${userInfo.username}`;
+
+        // Conectar ao Socket.IO
+        connectSocket();
+
+        // Limpar qualquer conversa anterior salva
+        localStorage.removeItem('lastChat');
+        sessionStorage.removeItem('lastChat');
+
+        // Mostrar a tela de boas-vindas do sistema
+        console.log('Exibindo tela de boas-vindas');
+        welcomeScreen.style.display = 'none';
+        systemWelcome.style.display = 'flex';
+        activeChat.style.display = 'none';
+    }
+
+    // Inicializar a interface
+    initializeUI();
+
+    // Configurar menu de ferramentas
+    const toolsMenuBtn = document.getElementById('toolsMenuBtn');
+    const toolsMenu = document.getElementById('toolsMenu');
+    const closeMenu = document.getElementById('closeMenu');
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    document.body.appendChild(overlay);
+
+    if (toolsMenuBtn) {
+        toolsMenuBtn.addEventListener('click', function() {
+            toolsMenu.classList.add('active');
+            overlay.classList.add('active');
+        });
+    }
+
+    function closeMenuHandler() {
+        toolsMenu.classList.remove('active');
+        overlay.classList.remove('active');
+    }
+
+    // Adicionar listener para a tecla Esc
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeMenuHandler();
+        }
+    });
+
+    closeMenu.addEventListener('click', closeMenuHandler);
+    overlay.addEventListener('click', closeMenuHandler);
+
+    // Configurar o botão de modo escuro - Implementação direta
+    document.getElementById('darkModeBtn').onclick = function() {
+        console.log('Botão de modo escuro clicado');
+        // Alternar a classe dark-mode no body
+        document.body.classList.toggle('dark-mode');
+
+        // Salvar a preferência do usuário
+        if (document.body.classList.contains('dark-mode')) {
+            localStorage.setItem('darkMode', 'enabled');
+            this.querySelector('i').className = 'fas fa-sun';
+            this.querySelector('span').textContent = 'Modo Claro';
+        } else {
+            localStorage.setItem('darkMode', 'disabled');
+            this.querySelector('i').className = 'fas fa-moon';
+            this.querySelector('span').textContent = 'Modo Escuro';
+        }
+    };
+
+    // Verificar preferência salva
+    if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark-mode');
+        document.getElementById('darkModeBtn').querySelector('i').className = 'fas fa-sun';
+        document.getElementById('darkModeBtn').querySelector('span').textContent = 'Modo Claro';
+    }
+
+    // Adicionar indicador de digitação
+    if (chatMessages) {
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.innerHTML = `
+            <span></span>
+            <span></span>
+            <span></span>
+        `;
+        typingIndicator.style.display = 'none';
+        chatMessages.appendChild(typingIndicator);
+    }
+});
+</script>
+
+<!-- Script para melhorias do chat -->
+<script src="chat-enhancements.js"></script>
+
+<!-- Script para corrigir a lista de contatos e botões -->
+<script src="contacts-fix.js"></script>
+
+<!-- Script para o menu do chat -->
+<script src="chat-menu.js"></script>
+
+<!-- Script para melhorias de mensagens -->
+<script src="message-enhancements.js"></script>
+
+<!-- Script para temas personalizados -->
+<script src="themes.js"></script>
+
+<!-- Script para ajustar a largura das mensagens -->
+<script src="message-width.js"></script>
+
+<!-- Scripts removidos de status personalizado -->
+
+<!-- Scripts integrados -->
+<script src="simple-call.js"></script>
+<script src="integrated-buttons.js"></script>
+<script src="contact-selector.js"></script>
+</body>
+</html>

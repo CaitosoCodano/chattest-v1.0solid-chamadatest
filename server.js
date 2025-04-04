@@ -38,6 +38,15 @@ app.use((req, res, next) => {
     next();
 });
 
+// Middleware para capturar erros de JSON inválido
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.error('Erro de JSON inválido:', err);
+        return res.status(400).json({ message: 'JSON inválido', error: err.message });
+    }
+    next(err);
+});
+
 // Armazenar usuários conectados
 const connectedUsers = new Map();
 
@@ -1044,18 +1053,19 @@ app.get('/api/debug/avatars', async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-// Adicionar rota de verificação de saúde para o Render
-app.get('/health', (req, res) => {
-    try {
-        // Verificar conexão com o MongoDB
-        const isConnected = mongoose.connection.readyState === 1;
+// Importar verificador de saúde
+const checkHealth = require('./health-check');
 
-        res.status(200).json({
-            status: 'ok',
-            message: 'Servidor está funcionando',
-            mongodb: isConnected ? 'conectado' : 'desconectado',
-            env: process.env.NODE_ENV || 'development'
-        });
+// Adicionar rota de verificação de saúde para o Render
+app.get('/health', async (req, res) => {
+    try {
+        // Verificar saúde do servidor e suas dependências
+        const health = await checkHealth();
+
+        // Definir código de status com base no status geral
+        const statusCode = health.status === 'ok' ? 200 : 503;
+
+        res.status(statusCode).json(health);
     } catch (error) {
         console.error('Erro na rota /health:', error);
         res.status(500).json({
@@ -1081,9 +1091,33 @@ app.use((req, res, next) => {
     res.status(404).send('Página não encontrada');
 });
 
+// Middleware para tratamento de erros global
+app.use((err, req, res, next) => {
+    console.error('Erro não tratado:', err);
+
+    // Determinar o código de status apropriado
+    const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+
+    // Enviar resposta de erro
+    res.status(statusCode).json({
+        message: err.message,
+        stack: process.env.NODE_ENV === 'production' ? '🚀' : err.stack,
+        error: process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : err.toString()
+    });
+});
+
 // Iniciar o servidor
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Configurado' : 'Não configurado'}`);
     console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Configurado' : 'Não configurado'}`);
+    console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+
+    // Verificar conexão com o MongoDB
+    const isConnected = mongoose.connection.readyState === 1;
+    console.log(`Estado da conexão MongoDB: ${isConnected ? 'Conectado' : 'Desconectado'}`);
+
+    if (!isConnected) {
+        console.warn('Aviso: Servidor iniciado, mas a conexão com o MongoDB não está ativa.');
+    }
 });

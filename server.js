@@ -964,8 +964,22 @@ app.get('/api/debug/avatars', async (req, res) => {
 // O status é controlado exclusivamente pelo usuário através da interface de status personalizado
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+
+// Adicionar rota de verificação de saúde para o Render
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Servidor está funcionando' });
+});
+
+// Adicionar rota raiz para verificação
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Iniciar o servidor
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Configurado' : 'Não configurado'}`);
+    console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Configurado' : 'Não configurado'}`);
 });
 
 

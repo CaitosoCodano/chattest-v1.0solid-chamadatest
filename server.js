@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 const connectDB = require('./config/database');
 const User = require('./models/User');
 const Message = require('./models/Message');
@@ -26,6 +27,16 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '/')));
+
+// Configurar CORS
+const corsOptions = require('./cors-config');
+app.use(cors(corsOptions));
+
+// Adicionar middleware para logs de requisições
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
 
 // Armazenar usuários conectados
 const connectedUsers = new Map();
@@ -348,8 +359,30 @@ io.on('connection', (socket) => {
 
 // Rota de registro
 app.post('/api/register', async (req, res) => {
+    console.log('Recebida requisição para registro de usuário');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+
     try {
+        // Verificar se o corpo da requisição está vazio
+        if (!req.body || Object.keys(req.body).length === 0) {
+            console.error('Corpo da requisição vazio ou inválido');
+            return res.status(400).json({ message: 'Dados de registro inválidos ou ausentes' });
+        }
+
         const { username, password } = req.body;
+
+        // Validar campos obrigatórios
+        if (!username || !password) {
+            console.error('Campos obrigatórios ausentes:', { username: !!username, password: !!password });
+            return res.status(400).json({ message: 'Nome de usuário e senha são obrigatórios' });
+        }
+
+        // Validar tamanho da senha
+        if (password.length < 6) {
+            console.error('Senha muito curta');
+            return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres' });
+        }
 
         // Adicionar um sufixo aleatório ao nome de usuário para testes
         // se o parâmetro test=true estiver presente
@@ -357,57 +390,103 @@ app.post('/api/register', async (req, res) => {
         if (req.query.test === 'true') {
             const randomSuffix = Math.floor(Math.random() * 10000);
             finalUsername = `${username}_${randomSuffix}`;
+            console.log(`Modo de teste ativado. Nome de usuário modificado para: ${finalUsername}`);
         }
 
         // Verificar se o usuário já existe
+        console.log(`Verificando se o usuário ${finalUsername} já existe...`);
         const userExists = await User.findOne({ username: finalUsername });
         if (userExists) {
+            console.log(`Usuário ${finalUsername} já existe`);
             return res.status(400).json({ message: 'Usuário já existe' });
         }
 
         // Criar novo usuário com avatar fixo
+        console.log(`Criando novo usuário: ${finalUsername}`);
         const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${finalUsername}`;
-        const user = await User.create({
-            username: finalUsername,
-            password,
-            avatar: avatar
-        });
 
-        if (user) {
-            res.status(201).json({
-                _id: user._id,
-                username: user.username,
-                avatar: user.avatar,
-                token: generateToken(user._id)
+        try {
+            const user = await User.create({
+                username: finalUsername,
+                password,
+                avatar: avatar
             });
-        } else {
-            res.status(400).json({ message: 'Dados de usuário inválidos' });
+
+            if (user) {
+                console.log(`Usuário ${finalUsername} criado com sucesso. ID: ${user._id}`);
+                const token = generateToken(user._id);
+                console.log(`Token gerado para ${finalUsername}`);
+
+                return res.status(201).json({
+                    _id: user._id,
+                    username: user.username,
+                    avatar: user.avatar,
+                    token: token
+                });
+            } else {
+                console.error('Falha ao criar usuário - retorno nulo');
+                return res.status(400).json({ message: 'Dados de usuário inválidos' });
+            }
+        } catch (createError) {
+            console.error('Erro ao criar usuário:', createError);
+            return res.status(400).json({ message: `Erro ao criar usuário: ${createError.message}` });
         }
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Erro geral na rota de registro:', error);
+        return res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
     }
 });
 
 // Rota de login
 app.post('/api/login', async (req, res) => {
+    console.log('Recebida requisição para login de usuário');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+
     try {
+        // Verificar se o corpo da requisição está vazio
+        if (!req.body || Object.keys(req.body).length === 0) {
+            console.error('Corpo da requisição vazio ou inválido');
+            return res.status(400).json({ message: 'Dados de login inválidos ou ausentes' });
+        }
+
         const { username, password } = req.body;
 
+        // Validar campos obrigatórios
+        if (!username || !password) {
+            console.error('Campos obrigatórios ausentes:', { username: !!username, password: !!password });
+            return res.status(400).json({ message: 'Nome de usuário e senha são obrigatórios' });
+        }
+
         // Verificar se o usuário existe
+        console.log(`Verificando credenciais para o usuário: ${username}`);
         const user = await User.findOne({ username });
 
-        if (user && (await user.matchPassword(password))) {
-            res.json({
+        if (!user) {
+            console.log(`Usuário não encontrado: ${username}`);
+            return res.status(401).json({ message: 'Usuário ou senha inválidos' });
+        }
+
+        // Verificar senha
+        const isMatch = await user.matchPassword(password);
+        if (isMatch) {
+            console.log(`Login bem-sucedido para o usuário: ${username}`);
+            const token = generateToken(user._id);
+            console.log(`Token gerado para ${username}`);
+
+            return res.json({
                 _id: user._id,
                 username: user.username,
                 avatar: user.avatar,
-                token: generateToken(user._id)
+                token: token
             });
         } else {
-            res.status(401).json({ message: 'Usuário ou senha inválidos' });
+            console.log(`Senha incorreta para o usuário: ${username}`);
+            return res.status(401).json({ message: 'Usuário ou senha inválidos' });
         }
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Erro na rota de login:', error);
+        return res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
     }
 });
 
@@ -967,12 +1046,39 @@ const PORT = process.env.PORT || 3001;
 
 // Adicionar rota de verificação de saúde para o Render
 app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', message: 'Servidor está funcionando' });
+    try {
+        // Verificar conexão com o MongoDB
+        const isConnected = mongoose.connection.readyState === 1;
+
+        res.status(200).json({
+            status: 'ok',
+            message: 'Servidor está funcionando',
+            mongodb: isConnected ? 'conectado' : 'desconectado',
+            env: process.env.NODE_ENV || 'development'
+        });
+    } catch (error) {
+        console.error('Erro na rota /health:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Erro ao verificar status do servidor',
+            error: process.env.NODE_ENV === 'production' ? null : error.message
+        });
+    }
 });
 
 // Adicionar rota raiz para verificação
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    try {
+        res.sendFile(path.join(__dirname, 'index.html'));
+    } catch (error) {
+        console.error('Erro na rota raiz:', error);
+        res.status(500).send('Erro ao carregar a página inicial. Por favor, tente novamente mais tarde.');
+    }
+});
+
+// Adicionar rota de fallback para lidar com erros 404
+app.use((req, res, next) => {
+    res.status(404).send('Página não encontrada');
 });
 
 // Iniciar o servidor
@@ -981,6 +1087,3 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Configurado' : 'Não configurado'}`);
     console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Configurado' : 'Não configurado'}`);
 });
-
-
-

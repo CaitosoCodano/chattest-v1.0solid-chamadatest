@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Variáveis para chamada
     let callInProgress = false;
     let currentCallUser = null;
+    let callAnswered = false;
+    let callTimeoutTimer = null;
 
     // Criar interface de chamada
     const callUI = document.createElement('div');
@@ -136,15 +138,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 callerName: callerName
             });
 
-            // Simular resposta após 2 segundos
-            setTimeout(() => {
-                // 50% de chance de aceitar a chamada
-                if (Math.random() > 0.5) {
-                    simulateCallAccepted();
-                } else {
-                    simulateCallRejected();
+            // Configurar um temporizador para verificar se a chamada foi atendida
+            // Se não for atendida em 10 segundos, mostrar mensagem
+            callAnswered = false;
+
+            // Limpar qualquer temporizador existente
+            if (callTimeoutTimer) {
+                clearTimeout(callTimeoutTimer);
+            }
+
+            callTimeoutTimer = setTimeout(() => {
+                // Verificar se a chamada já foi atendida
+                if (!callAnswered) {
+                    alert('Ninguém atendeu a chamada');
+                    endCall();
                 }
-            }, 2000);
+            }, 10000); // 10 segundos
         } else {
             // Simulação sem socket
             setTimeout(() => {
@@ -155,6 +164,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Função para aceitar chamada
     function acceptCall() {
+        // Marcar a chamada como atendida
+        callAnswered = true;
+
         // Ocultar interface de chamada recebida
         incomingCallUI.style.display = 'none';
 
@@ -214,14 +226,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Parar temporizador
         stopCallTimer();
 
+        // Limpar o temporizador de timeout
+        if (callTimeoutTimer) {
+            clearTimeout(callTimeoutTimer);
+            callTimeoutTimer = null;
+        }
+
         // Resetar estado
         callInProgress = false;
+        callAnswered = false;
+
+        // Guardar o ID do usuário antes de resetar
+        const targetUserId = currentCallUser ? currentCallUser._id : null;
         currentCallUser = null;
 
         // Notificar servidor (se implementado)
-        if (window.socket && currentCallUser) {
+        if (window.socket && targetUserId) {
             window.socket.emit('endCall', {
-                targetUserId: currentCallUser._id
+                targetUserId: targetUserId
             });
         }
     }
@@ -273,6 +295,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funções para simular eventos de chamada
     function simulateCallAccepted() {
+        // Marcar a chamada como atendida
+        callAnswered = true;
+
+        // Limpar o temporizador de timeout
+        if (callTimeoutTimer) {
+            clearTimeout(callTimeoutTimer);
+            callTimeoutTimer = null;
+        }
+
         document.getElementById('callStatus').textContent = 'Conectado';
         startCallTimer();
     }
@@ -311,15 +342,37 @@ document.addEventListener('DOMContentLoaded', function() {
             simulateIncomingCall(data.callerName, data.callerId);
         });
 
-        window.socket.on('callAccepted', () => {
+        window.socket.on('callAccepted', (data) => {
+            console.log('Chamada aceita:', data);
             simulateCallAccepted();
         });
 
-        window.socket.on('callRejected', () => {
+        window.socket.on('callConnected', (data) => {
+            console.log('Chamada conectada:', data);
+            // Marcar a chamada como atendida
+            callAnswered = true;
+
+            // Limpar o temporizador de timeout
+            if (callTimeoutTimer) {
+                clearTimeout(callTimeoutTimer);
+                callTimeoutTimer = null;
+            }
+        });
+
+        window.socket.on('callRejected', (data) => {
+            console.log('Chamada rejeitada:', data);
+            alert(`Chamada rejeitada: ${data.reason || 'Usuário recusou a chamada'}`);
             simulateCallRejected();
         });
 
-        window.socket.on('callEnded', () => {
+        window.socket.on('callFailed', (data) => {
+            console.log('Chamada falhou:', data);
+            alert(`Chamada falhou: ${data.reason || 'Erro desconhecido'}`);
+            endCall();
+        });
+
+        window.socket.on('callEnded', (data) => {
+            console.log('Chamada encerrada pelo outro usuário:', data);
             alert('Chamada encerrada pelo outro usuário');
             endCall();
         });

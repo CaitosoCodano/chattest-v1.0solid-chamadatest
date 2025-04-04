@@ -64,8 +64,23 @@ function registerSimpleWebRTCEvents(io, socket, connectedUsers) {
 
         if (targetSocketId) {
             // Notificar o chamador que a chamada foi aceita
-            io.to(targetSocketId).emit('callAccepted', { accepterId });
+            io.to(targetSocketId).emit('callAccepted', {
+                accepterId,
+                message: 'Chamada aceita com sucesso'
+            });
             console.log(`Notificação de aceitação enviada para ${targetUserId} (socket ${targetSocketId})`);
+
+            // Notificar o aceitador que a chamada foi conectada com sucesso
+            socket.emit('callConnected', {
+                targetUserId,
+                message: 'Chamada conectada com sucesso'
+            });
+        } else {
+            // Chamador não está mais online
+            socket.emit('callFailed', {
+                reason: 'O usuário que iniciou a chamada não está mais disponível'
+            });
+            console.log(`Chamador ${targetUserId} não está mais online`);
         }
     });
 

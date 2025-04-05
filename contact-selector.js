@@ -285,6 +285,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Adicionar evento de clique ao botão de encerrar chamada
         document.getElementById('endGroupCallButton').addEventListener('click', function() {
+            // Limpar temporizadores
+            if (window.groupCallTimeoutTimer) {
+                clearTimeout(window.groupCallTimeoutTimer);
+                window.groupCallTimeoutTimer = null;
+            }
+
+            if (window.groupCallTimerInterval) {
+                clearInterval(window.groupCallTimerInterval);
+                window.groupCallTimerInterval = null;
+            }
+
+            // Notificar outros usuários que a chamada foi encerrada
+            if (window.socket && selectedContacts.length > 0) {
+                selectedContacts.forEach(contact => {
+                    window.socket.emit('endCall', {
+                        targetUserId: contact._id
+                    });
+                    console.log(`Notificando ${contact.username} que a chamada foi encerrada`);
+                });
+            }
+
+            // Remover a interface de chamada
             callUI.remove();
         });
 

@@ -17,14 +17,26 @@ function registerSimpleWebRTCEvents(io, socket, connectedUsers) {
         }
 
         console.log(`Usuário ${callerId} (${callerName}) está chamando ${targetUserId}`);
+        console.log('Dados da chamada:', data);
+        console.log('Usuários conectados:', Array.from(connectedUsers.entries()));
 
         // Encontrar o socket do destinatário
         let targetSocketId = null;
         for (const [socketId, userId] of connectedUsers.entries()) {
             if (userId === targetUserId) {
                 targetSocketId = socketId;
+                console.log(`Encontrado socket ${socketId} para o usuário ${userId}`);
                 break;
             }
+        }
+
+        if (!targetSocketId) {
+            console.log(`Não foi encontrado socket para o usuário ${targetUserId}`);
+            socket.emit('callRejected', {
+                reason: 'Usuário não está online ou não foi possível encontrar o socket',
+                targetUserId
+            });
+            return;
         }
 
         if (targetSocketId) {
@@ -54,13 +66,24 @@ function registerSimpleWebRTCEvents(io, socket, connectedUsers) {
         }
 
         console.log(`Usuário ${accepterId} aceitou chamada de ${targetUserId}`);
+        console.log('Dados da aceitação:', data);
+        console.log('Usuários conectados:', Array.from(connectedUsers.entries()));
 
         // Encontrar o socket do chamador
         let targetSocketId = null;
         for (const [socketId, userId] of connectedUsers.entries()) {
             if (userId === targetUserId) {
                 targetSocketId = socketId;
+                console.log(`Encontrado socket ${socketId} para o usuário ${userId}`);
                 break;
+            }
+        }
+
+        if (!targetSocketId) {
+            console.log(`Não foi encontrado socket para o usuário ${targetUserId}. Tentando buscar por todos os sockets.`);
+            // Tentar encontrar qualquer socket que possa estar relacionado ao chamador
+            for (const [socketId, userId] of connectedUsers.entries()) {
+                console.log(`Verificando socket ${socketId} para usuário ${userId}`);
             }
         }
 

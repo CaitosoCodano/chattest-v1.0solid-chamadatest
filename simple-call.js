@@ -392,6 +392,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         window.socket.on('callConnected', (data) => {
             console.log('Chamada conectada:', data);
+            console.log('Estado atual da chamada:', {
+                callInProgress,
+                currentCallUser,
+                userInfo: window.userInfo
+            });
+
             // Marcar a chamada como atendida
             callAnswered = true;
 
@@ -399,6 +405,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (callTimeoutTimer) {
                 clearTimeout(callTimeoutTimer);
                 callTimeoutTimer = null;
+            }
+
+            // Atualizar a interface para mostrar que a chamada foi conectada
+            document.getElementById('callStatus').textContent = 'Conectado';
+
+            // Iniciar o temporizador de chamada se ainda não foi iniciado
+            if (!callTimerInterval) {
+                startCallTimer();
+            }
+
+            // Mostrar a interface de chamada se não estiver visível
+            if (callUI.style.display !== 'flex') {
+                callUI.style.display = 'flex';
             }
         });
 
@@ -432,6 +451,44 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             window.groupCallAnswered = true;
+
+            // Verificar se estamos em uma chamada individual ou em grupo
+            if (callInProgress) {
+                console.log('Estamos em uma chamada individual e recebemos evento de chamada em grupo');
+                // Atualizar a interface para mostrar que a chamada foi conectada
+                document.getElementById('callStatus').textContent = 'Conectado';
+
+                // Iniciar o temporizador de chamada se ainda não foi iniciado
+                if (!callTimerInterval) {
+                    startCallTimer();
+                }
+            } else {
+                console.log('Recebido evento de chamada em grupo, mas não estamos em uma chamada individual');
+                // Procurar por uma interface de chamada em grupo
+                const groupCallUI = document.getElementById('callUI');
+                if (groupCallUI) {
+                    // Atualizar o status da chamada em grupo
+                    const statusElement = groupCallUI.querySelector('p');
+                    if (statusElement && statusElement.textContent === 'Chamando...') {
+                        statusElement.textContent = 'Conectado';
+                    }
+
+                    // Iniciar um temporizador para a chamada em grupo
+                    const timerElement = groupCallUI.querySelector('div[style*="font-family: monospace"]');
+                    if (timerElement) {
+                        let seconds = 0;
+                        const groupCallTimer = setInterval(() => {
+                            seconds++;
+                            const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+                            const secs = (seconds % 60).toString().padStart(2, '0');
+                            timerElement.textContent = `${minutes}:${secs}`;
+                        }, 1000);
+
+                        // Armazenar o temporizador para poder limpar depois
+                        window.groupCallTimerInterval = groupCallTimer;
+                    }
+                }
+            }
         });
     }
 

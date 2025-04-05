@@ -340,6 +340,13 @@
             </label>
         </div>
 
+        <div class="test-mode-toggle" style="background-color: #e3f2fd; border-color: #bbdefb; color: #0d47a1;">
+            <label>
+                <input type="checkbox" id="micMonitorMode">
+                Ativar monitoramento do microfone (ouça sua própria voz durante o teste)
+            </label>
+        </div>
+
         <div class="test-area">
             <div class="test-card">
                 <h2>Configuração do Teste</h2>
@@ -442,6 +449,9 @@
         let isMuted = false;
         let isCallActive = false;
         let localStream = null;
+        let micMonitorNode = null;
+        let micMonitorGainNode = null;
+        let micMonitorActive = false;
 
         // Elementos da interface
         const microphoneStatus = document.getElementById('microphoneStatus');
@@ -472,12 +482,34 @@
             logMessage(`Modo de teste automático ${this.checked ? 'ativado' : 'desativado'}`, 'info');
         });
 
+        // Verificar modo de monitoramento do microfone
+        document.getElementById('micMonitorMode').addEventListener('change', function() {
+            localStorage.setItem('voiceCallMicMonitor', this.checked);
+            micMonitorActive = this.checked;
+
+            if (this.checked) {
+                logMessage('Monitoramento do microfone ativado', 'info');
+                startMicrophoneMonitor();
+            } else {
+                logMessage('Monitoramento do microfone desativado', 'info');
+                stopMicrophoneMonitor();
+            }
+        });
+
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             // Verificar configuração salva
             const autoTest = localStorage.getItem('voiceCallAutoTest');
             if (autoTest !== null) {
                 document.getElementById('autoTestMode').checked = autoTest === 'true';
+            }
+
+            // Verificar configuração de monitoramento do microfone
+            const micMonitor = localStorage.getItem('voiceCallMicMonitor');
+            if (micMonitor !== null) {
+                const shouldMonitor = micMonitor === 'true';
+                document.getElementById('micMonitorMode').checked = shouldMonitor;
+                micMonitorActive = shouldMonitor;
             }
 
             // Verificar microfone e alto-falante
@@ -505,6 +537,11 @@
 
                     // Iniciar medição de volume
                     startVolumeMeter(stream);
+
+                    // Iniciar monitoramento do microfone se ativado
+                    if (micMonitorActive) {
+                        startMicrophoneMonitor();
+                    }
                 }
 
                 // Verificar alto-falante reproduzindo um som de teste
@@ -802,6 +839,113 @@
                 speakerStatus.className = 'status-indicator danger';
                 speakerStatus.innerHTML = `<i class="fas fa-volume-mute"></i> Alto-falante inativo${message ? ': ' + message : ''}`;
             }
+        }
+
+        // Função para iniciar o monitoramento do microfone (ouvir a própria voz)
+        function startMicrophoneMonitor() {
+            if (!localStream || !micMonitorActive) {
+                logMessage('Não é possível iniciar o monitoramento do microfone: stream não disponível ou monitoramento desativado', 'warning');
+                return;
+            }
+
+            try {
+                // Criar contexto de áudio se não existir
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // Criar nó de fonte de mídia
+                if (!micMonitorNode) {
+                    micMonitorNode = audioContext.createMediaStreamSource(localStream);
+                }
+
+                // Criar nó de ganho para controlar o volume
+                if (!micMonitorGainNode) {
+                    micMonitorGainNode = audioContext.createGain();
+                    micMonitorGainNode.gain.value = 0.5; // Volume em 50% para evitar feedback
+                }
+
+                // Conectar nós
+                micMonitorNode.connect(micMonitorGainNode);
+                micMonitorGainNode.connect(audioContext.destination);
+
+                logMessage('Monitoramento do microfone iniciado - agora você pode ouvir sua própria voz', 'success');
+
+                // Adicionar controle de volume
+                addVolumeControl();
+
+            } catch (error) {
+                logMessage(`Erro ao iniciar monitoramento do microfone: ${error.message}`, 'error');
+            }
+        }
+
+        // Função para parar o monitoramento do microfone
+        function stopMicrophoneMonitor() {
+            if (micMonitorGainNode) {
+                micMonitorGainNode.disconnect();
+                micMonitorGainNode = null;
+            }
+
+            if (micMonitorNode) {
+                micMonitorNode.disconnect();
+                micMonitorNode = null;
+            }
+
+            // Remover controle de volume
+            const volumeControl = document.getElementById('micMonitorVolumeControl');
+            if (volumeControl) {
+                volumeControl.remove();
+            }
+
+            logMessage('Monitoramento do microfone parado', 'info');
+        }
+
+        // Função para adicionar controle de volume
+        function addVolumeControl() {
+            // Verificar se já existe
+            if (document.getElementById('micMonitorVolumeControl')) {
+                return;
+            }
+
+            // Criar container
+            const volumeControl = document.createElement('div');
+            volumeControl.id = 'micMonitorVolumeControl';
+            volumeControl.className = 'status-indicator';
+            volumeControl.style.backgroundColor = '#e3f2fd';
+            volumeControl.style.marginTop = '10px';
+            volumeControl.style.display = 'flex';
+            volumeControl.style.alignItems = 'center';
+            volumeControl.style.justifyContent = 'space-between';
+
+            // Criar label
+            const label = document.createElement('label');
+            label.textContent = 'Volume do monitoramento: ';
+            label.style.marginRight = '10px';
+
+            // Criar slider
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.min = '0';
+            slider.max = '100';
+            slider.value = '50';
+            slider.style.flex = '1';
+
+            // Adicionar evento
+            slider.addEventListener('input', function() {
+                if (micMonitorGainNode) {
+                    // Converter valor de 0-100 para 0-1
+                    micMonitorGainNode.gain.value = this.value / 100;
+                    logMessage(`Volume do monitoramento ajustado para ${this.value}%`, 'info');
+                }
+            });
+
+            // Adicionar elementos ao container
+            volumeControl.appendChild(label);
+            volumeControl.appendChild(slider);
+
+            // Adicionar ao card de configuração
+            const configCard = document.querySelector('.test-card');
+            configCard.appendChild(volumeControl);
         }
 
         // Função para adicionar mensagem de log

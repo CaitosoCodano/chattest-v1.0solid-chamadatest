@@ -106,6 +106,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         console.log(`Iniciando chamada para ${window.currentChatUser.username}`);
 
+        // Remover qualquer interface de chamada existente
+        const existingCallUIs = document.querySelectorAll('[id^="callUI"]');
+        existingCallUIs.forEach(ui => {
+            if (ui !== callUI) {
+                console.log('Removendo interface de chamada existente:', ui.id);
+                ui.remove();
+            }
+        });
+
+        // Esconder qualquer interface de chamada recebida
+        if (incomingCallUI) {
+            incomingCallUI.style.display = 'none';
+        }
+
         // Configurar dados da chamada
         currentCallUser = window.currentChatUser;
         callInProgress = true;
@@ -166,6 +180,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function acceptCall() {
         // Marcar a chamada como atendida
         callAnswered = true;
+
+        // Remover qualquer interface de chamada existente
+        const existingCallUIs = document.querySelectorAll('[id^="callUI"]');
+        existingCallUIs.forEach(ui => {
+            if (ui !== callUI) {
+                console.log('Removendo interface de chamada existente:', ui.id);
+                ui.remove();
+            }
+        });
 
         // Ocultar interface de chamada recebida
         incomingCallUI.style.display = 'none';
@@ -319,6 +342,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Remover qualquer interface de chamada existente
+        const existingCallUIs = document.querySelectorAll('[id^="callUI"]');
+        existingCallUIs.forEach(ui => {
+            if (ui !== callUI && ui !== incomingCallUI) {
+                console.log('Removendo interface de chamada existente:', ui.id);
+                ui.remove();
+            }
+        });
+
         // Configurar dados da chamada
         currentCallUser = {
             _id: callerId || 'simulated-caller-id',
@@ -368,6 +400,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!callInProgress) {
                     console.log('Recebido callAccepted mas não estamos em chamada ativa. Criando interface de chamada.');
 
+                    // Remover qualquer interface de chamada existente
+                    const existingCallUIs = document.querySelectorAll('[id^="callUI"]');
+                    existingCallUIs.forEach(ui => {
+                        if (ui !== callUI) {
+                            console.log('Removendo interface de chamada existente:', ui.id);
+                            ui.remove();
+                        }
+                    });
+
                     // Configurar informações do usuário para a chamada
                     currentCallUser = {
                         _id: data.accepterId,
@@ -377,6 +418,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Atualizar interface
                     document.getElementById('callUsername').textContent = currentCallUser.username;
                     document.getElementById('callStatus').textContent = 'Conectado';
+
+                    // Esconder qualquer interface de chamada recebida
+                    if (incomingCallUI) {
+                        incomingCallUI.style.display = 'none';
+                    }
 
                     // Mostrar interface de chamada
                     callUI.style.display = 'flex';
@@ -494,7 +540,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Esta é uma chamada em grupo que iniciamos');
 
                     // Verificar se temos uma interface de chamada individual
-                    if (callUI && callUI.style.display !== 'flex') {
+                    if (callUI) {
+                        // Remover qualquer interface de chamada existente
+                        const existingCallUIs = document.querySelectorAll('[id^="callUI"]');
+                        existingCallUIs.forEach(ui => {
+                            if (ui !== callUI) {
+                                console.log('Removendo interface de chamada existente:', ui.id);
+                                ui.remove();
+                            }
+                        });
+
                         // Configurar informações do usuário para a chamada
                         currentCallUser = {
                             _id: data.accepterId,
@@ -504,6 +559,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Atualizar interface
                         document.getElementById('callUsername').textContent = currentCallUser.username;
                         document.getElementById('callStatus').textContent = 'Conectado';
+
+                        // Esconder qualquer interface de chamada recebida
+                        if (incomingCallUI) {
+                            incomingCallUI.style.display = 'none';
+                        }
 
                         // Mostrar interface de chamada
                         callUI.style.display = 'flex';

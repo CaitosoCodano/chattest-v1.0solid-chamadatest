@@ -31,7 +31,9 @@ function registerSimpleWebRTCEvents(io, socket, connectedUsers) {
             // Enviar notificação de chamada para o destinatário
             io.to(targetSocketId).emit('incomingCall', {
                 callerId,
-                callerName
+                callerName,
+                targetUserId,
+                timestamp: Date.now()
             });
             console.log(`Notificação de chamada enviada para ${targetUserId} (socket ${targetSocketId}) de ${callerId} (${callerName})`);
         } else {
@@ -66,7 +68,10 @@ function registerSimpleWebRTCEvents(io, socket, connectedUsers) {
             // Notificar o chamador que a chamada foi aceita
             io.to(targetSocketId).emit('callAccepted', {
                 accepterId,
-                message: 'Chamada aceita com sucesso'
+                accepterName: 'Usuário', // Idealmente, buscar o nome do usuário do banco de dados
+                callerId: targetUserId,
+                message: 'Chamada aceita com sucesso',
+                timestamp: Date.now()
             });
             console.log(`Notificação de aceitação enviada para ${targetUserId} (socket ${targetSocketId})`);
 

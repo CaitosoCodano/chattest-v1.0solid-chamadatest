@@ -344,7 +344,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
         window.socket.on('callAccepted', (data) => {
             console.log('Chamada aceita:', data);
-            simulateCallAccepted();
+            console.log('Estado atual da chamada:', {
+                callInProgress,
+                currentCallUser,
+                userInfo: window.userInfo,
+                callerId: data.callerId,
+                accepterId: data.accepterId
+            });
+
+            // Verificar se estamos em uma chamada
+            if (!callInProgress) {
+                console.log('Não estamos em uma chamada ativa');
+                return;
+            }
+
+            // Verificar se temos informações do usuário atual
+            if (!window.userInfo) {
+                console.log('Informações do usuário não disponíveis');
+                return;
+            }
+
+            // Verificar se esta é uma chamada que iniciamos
+            // O callerId no evento deve corresponder ao nosso ID de usuário
+            if (data.callerId === window.userInfo._id) {
+                console.log('Chamada que iniciamos foi aceita pelo destinatário');
+
+                // Forçar atualização da interface
+                document.getElementById('callStatus').textContent = 'Conectado';
+
+                // Marcar a chamada como atendida
+                callAnswered = true;
+
+                // Limpar o temporizador de timeout
+                if (callTimeoutTimer) {
+                    clearTimeout(callTimeoutTimer);
+                    callTimeoutTimer = null;
+                }
+
+                // Iniciar o temporizador de chamada
+                startCallTimer();
+            } else {
+                console.log('Recebido evento callAccepted, mas não é para a chamada atual');
+                console.log('ID do chamador no evento:', data.callerId);
+                console.log('Nosso ID de usuário:', window.userInfo._id);
+            }
         });
 
         window.socket.on('callConnected', (data) => {

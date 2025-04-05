@@ -34,6 +34,9 @@ function initializeWebRTCCalls() {
         return;
     }
 
+    // Limpar recursos existentes
+    cleanupWebRTCResources();
+
     // Remover qualquer interface de chamada existente
     removeExistingCallUIs();
 
@@ -44,6 +47,70 @@ function initializeWebRTCCalls() {
     setupSocketEvents();
 
     console.log('Sistema de chamadas WebRTC inicializado com sucesso');
+}
+
+// Limpar recursos WebRTC existentes
+function cleanupWebRTCResources() {
+    console.log('Limpando recursos WebRTC existentes');
+
+    // Parar streams existentes
+    if (localStream) {
+        localStream.getTracks().forEach(track => {
+            track.stop();
+            console.log(`Faixa parada: ${track.kind}`);
+        });
+        localStream = null;
+    }
+
+    if (remoteStream) {
+        remoteStream.getTracks().forEach(track => {
+            track.stop();
+            console.log(`Faixa remota parada: ${track.kind}`);
+        });
+        remoteStream = null;
+    }
+
+    // Fechar conexão peer existente
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+        console.log('Conexão peer fechada');
+    }
+
+    // Parar monitoramento do microfone
+    if (micMonitorActive) {
+        stopMicrophoneMonitor();
+    }
+
+    // Limpar contexto de áudio
+    if (audioContext && audioContext.state !== 'closed') {
+        try {
+            audioContext.close();
+            console.log('Contexto de áudio fechado');
+        } catch (e) {
+            console.error('Erro ao fechar contexto de áudio:', e);
+        }
+        audioContext = null;
+    }
+
+    // Limpar temporizadores
+    if (callTimeoutTimer) {
+        clearTimeout(callTimeoutTimer);
+        callTimeoutTimer = null;
+    }
+
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+    }
+
+    // Resetar variáveis
+    callDurationSeconds = 0;
+    isMuted = false;
+    pendingIceCandidates = [];
+    currentCall = null;
+
+    console.log('Recursos WebRTC limpos com sucesso');
 }
 
 // Remover interfaces de chamada existentes
@@ -146,6 +213,9 @@ function setupCallUI() {
         <!-- Mensagem de ajuda -->
         <div style="margin-top: 15px; font-size: 12px; color: #666; text-align: center;">
             Se não ouvir o outro usuário, verifique se o volume do seu dispositivo está ligado.
+            <button id="webrtcDiagnosticsButton" style="margin-top: 10px; padding: 5px 10px; background-color: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                Executar diagnóstico
+            </button>
         </div>
     `;
 
@@ -196,12 +266,93 @@ function setupCallUI() {
     document.getElementById('webrtcEndCallButton').addEventListener('click', endCall);
     document.getElementById('webrtcAcceptCallButton').addEventListener('click', acceptCall);
     document.getElementById('webrtcRejectCallButton').addEventListener('click', rejectCall);
+    document.getElementById('webrtcDiagnosticsButton').addEventListener('click', runDiagnostics);
 
     // Verificar configuração de monitoramento do microfone
     const savedMonitorState = localStorage.getItem('micMonitorActive');
     if (savedMonitorState === 'true') {
         micMonitorActive = true;
         updateMonitorButton();
+    }
+}
+
+// Função para executar diagnósticos
+async function runDiagnostics() {
+    console.log('Executando diagnósticos de chamada...');
+
+    // Verificar se temos a ferramenta de diagnóstico
+    if (!window.webrtcDiagnostics) {
+        console.error('Ferramenta de diagnóstico não disponível');
+        alert('Ferramenta de diagnóstico não disponível. Verifique se o arquivo webrtc-diagnostics.js está carregado.');
+        return;
+    }
+
+    try {
+        // Executar diagnóstico completo
+        const results = await window.webrtcDiagnostics.runFullDiagnostics();
+
+        // Exibir resultados
+        console.log('Resultados do diagnóstico:', results);
+
+        // Criar mensagem para o usuário
+        let message = 'Resultados do diagnóstico:\n\n';
+
+        // Microfone
+        message += '🎤 Microfone: ' + (results.microphone.success ? '✅ Funcionando' : '❌ Problema') + '\n';
+        if (!results.microphone.success) {
+            message += '   - ' + results.microphone.error + '\n';
+        }
+
+        // Reprodução de áudio
+        message += '🔊 Alto-falante: ' + (results.audioPlayback.success ? '✅ Funcionando' : '❌ Problema') + '\n';
+        if (!results.audioPlayback.success) {
+            message += '   - ' + results.audioPlayback.error + '\n';
+        }
+
+        // Conexão WebRTC
+        if (results.connection.supported) {
+            message += '🌐 Conexão WebRTC: ' + (results.connection.connected ? '✅ Conectado' : '❌ Problema') + '\n';
+            if (!results.connection.connected && results.connection.error) {
+                message += '   - ' + results.connection.error + '\n';
+            }
+
+            // Stream remoto
+            if (results.connection.remoteStream) {
+                message += '📡 Stream remoto: ' + (results.connection.remoteStream.available ? '✅ Disponível' : '❌ Indisponível') + '\n';
+                if (results.connection.remoteStream.available) {
+                    message += '   - Faixas de áudio: ' + results.connection.remoteStream.audioTracksCount + '\n';
+                }
+            }
+
+            // Elemento de áudio
+            if (results.connection.audioElement) {
+                message += '🔈 Elemento de áudio: ' + (!results.connection.audioElement.paused ? '✅ Reproduzindo' : '❌ Pausado') + '\n';
+                message += '   - Volume: ' + Math.round(results.connection.audioElement.volume * 100) + '%\n';
+                message += '   - Mudo: ' + (results.connection.audioElement.muted ? 'Sim' : 'Não') + '\n';
+            }
+        } else {
+            message += '🌐 Conexão WebRTC: ❌ Não suportada\n';
+        }
+
+        // Exibir mensagem
+        alert(message);
+
+        // Tentar corrigir problemas automaticamente
+        if (results.connection.remoteStream && results.connection.remoteStream.available) {
+            if (results.connection.audioElement && results.connection.audioElement.paused) {
+                console.log('Tentando reproduzir áudio automaticamente...');
+                const audioElement = document.getElementById('remoteAudio');
+                if (audioElement) {
+                    audioElement.play().catch(e => {
+                        console.error('Erro ao reproduzir áudio:', e);
+                    });
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao executar diagnóstico:', error);
+        alert('Erro ao executar diagnóstico: ' + (error.message || 'Erro desconhecido'));
     }
 }
 
@@ -474,6 +625,18 @@ function setupRemoteAudio(container) {
         return;
     }
 
+    console.log('Configurando áudio remoto com stream:', remoteStream);
+    console.log('Faixas de áudio no stream remoto:', remoteStream.getAudioTracks());
+
+    // Remover qualquer elemento de áudio existente
+    const existingAudio = document.getElementById('remoteAudio');
+    if (existingAudio) {
+        console.log('Removendo elemento de áudio existente');
+        existingAudio.pause();
+        existingAudio.srcObject = null;
+        existingAudio.remove();
+    }
+
     // Criar elemento de áudio com controles e configurações avançadas
     const audioElement = document.createElement('audio');
     audioElement.id = 'remoteAudio';
@@ -486,6 +649,11 @@ function setupRemoteAudio(container) {
     // Configurações adicionais para garantir a reprodução
     audioElement.setAttribute('playsinline', ''); // Redundante, mas importante para iOS
     audioElement.muted = false;
+
+    // Adicionar atributos para debug
+    audioElement.setAttribute('data-debug', 'remote-audio');
+    audioElement.style.display = 'block'; // Tornar visível para debug
+    audioElement.style.width = '100%';
 
     // Adicionar evento para verificar se o áudio está sendo reproduzido
     audioElement.onplay = () => {
@@ -510,12 +678,33 @@ function setupRemoteAudio(container) {
         console.log('Áudio remoto está tocando');
     };
 
+    // Adicionar evento para verificar quando o áudio é pausado
+    audioElement.onpause = () => {
+        console.log('Áudio remoto foi pausado');
+    };
+
+    // Adicionar evento para verificar quando o áudio termina
+    audioElement.onended = () => {
+        console.log('Áudio remoto terminou');
+    };
+
     // Verificar se o áudio está sendo reproduzido periodicamente
     const audioCheckInterval = setInterval(() => {
         if (!remoteStream || !audioElement) {
+            console.log('Stream remoto ou elemento de áudio não disponível, limpando intervalo');
             clearInterval(audioCheckInterval);
             return;
         }
+
+        // Verificar estado do elemento de áudio
+        console.log('Estado do áudio remoto:', {
+            paused: audioElement.paused,
+            ended: audioElement.ended,
+            readyState: audioElement.readyState,
+            currentTime: audioElement.currentTime,
+            volume: audioElement.volume,
+            muted: audioElement.muted
+        });
 
         if (audioElement.paused) {
             console.warn('Áudio remoto está pausado, tentando reproduzir novamente');
@@ -527,6 +716,12 @@ function setupRemoteAudio(container) {
             // Verificar se há atividade de áudio
             if (remoteStream.getAudioTracks().length > 0) {
                 const audioTrack = remoteStream.getAudioTracks()[0];
+                console.log('Estado da faixa de áudio remota:', {
+                    enabled: audioTrack.enabled,
+                    muted: audioTrack.muted,
+                    readyState: audioTrack.readyState
+                });
+
                 if (audioTrack.enabled && audioTrack.readyState === 'live') {
                     updateSpeakerStatus(true);
                 } else {
@@ -538,20 +733,66 @@ function setupRemoteAudio(container) {
 
     // Adicionar ao container
     container.appendChild(audioElement);
+    console.log('Elemento de áudio adicionado ao container');
 
     // Forçar a reprodução (importante para alguns navegadores)
-    audioElement.play().catch(e => {
+    console.log('Tentando iniciar reprodução de áudio remoto...');
+    audioElement.play().then(() => {
+        console.log('Reprodução de áudio iniciada com sucesso');
+        updateSpeakerStatus(true);
+    }).catch(e => {
         console.error('Erro ao iniciar reprodução de áudio:', e);
         // Atualizar status do alto-falante
         updateSpeakerStatus(false, 'Erro de reprodução');
 
         // Tentar novamente com interação do usuário
         alert('Clique em OK para ativar o áudio da chamada');
-        audioElement.play().catch(e2 => {
+        audioElement.play().then(() => {
+            console.log('Reprodução de áudio iniciada após interação do usuário');
+            updateSpeakerStatus(true);
+        }).catch(e2 => {
             console.error('Falha na segunda tentativa de reprodução de áudio:', e2);
             updateSpeakerStatus(false, 'Falha na reprodução');
+
+            // Tentar uma abordagem alternativa
+            tryAlternativeAudioPlayback(remoteStream, container);
         });
     });
+
+    return audioElement;
+}
+
+// Função para tentar uma abordagem alternativa de reprodução de áudio
+function tryAlternativeAudioPlayback(stream, container) {
+    console.log('Tentando abordagem alternativa para reprodução de áudio');
+
+    try {
+        // Criar um contexto de áudio para reprodução manual
+        const altAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Criar fonte de mídia a partir do stream
+        const source = altAudioContext.createMediaStreamSource(stream);
+
+        // Conectar diretamente à saída de áudio
+        source.connect(altAudioContext.destination);
+
+        console.log('Abordagem alternativa de reprodução de áudio configurada');
+        updateSpeakerStatus(true, 'Usando método alternativo');
+
+        // Adicionar um elemento de áudio oculto como fallback
+        const fallbackAudio = document.createElement('audio');
+        fallbackAudio.id = 'fallbackAudio';
+        fallbackAudio.autoplay = true;
+        fallbackAudio.srcObject = stream;
+        fallbackAudio.style.display = 'none';
+        container.appendChild(fallbackAudio);
+
+        return true;
+    } catch (error) {
+        console.error('Erro na abordagem alternativa de reprodução de áudio:', error);
+        updateSpeakerStatus(false, 'Falha em todos os métodos');
+        return false;
+    }
 }
 
 // Criar e enviar oferta SDP
@@ -1149,7 +1390,6 @@ function toggleMute() {
 }
 
 // Variáveis para medição de volume
-let audioContext = null;
 let mediaStreamSource = null;
 let analyser = null;
 let volumeMeterInterval = null;

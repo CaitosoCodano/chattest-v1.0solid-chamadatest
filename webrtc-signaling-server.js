@@ -3,6 +3,9 @@
  * Este arquivo implementa a sinalização WebRTC no lado do servidor
  */
 
+// Importar o modelo User
+const User = require('./models/User');
+
 const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
     console.log('Registrando eventos de sinalização WebRTC para o socket:', socket.id);
 
@@ -89,7 +92,6 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
 
         // Buscar o nome do usuário que aceitou a chamada
         // Vamos usar o MongoDB para buscar o nome do usuário
-        const User = require('./models/User');
 
         // Buscar o nome do usuário de forma assíncrona
         User.findById(accepterId)

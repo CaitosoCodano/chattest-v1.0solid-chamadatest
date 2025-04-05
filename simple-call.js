@@ -352,12 +352,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 accepterId: data.accepterId
             });
 
-            // Verificar se estamos em uma chamada
-            if (!callInProgress) {
-                console.log('Não estamos em uma chamada ativa');
-                return;
-            }
-
             // Verificar se temos informações do usuário atual
             if (!window.userInfo) {
                 console.log('Informações do usuário não disponíveis');
@@ -369,16 +363,40 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.callerId === window.userInfo._id) {
                 console.log('Chamada que iniciamos foi aceita pelo destinatário');
 
-                // Forçar atualização da interface
-                document.getElementById('callStatus').textContent = 'Conectado';
+                // Se não estamos em uma chamada ativa, mas recebemos callAccepted,
+                // vamos criar uma interface de chamada e mostrar que está conectada
+                if (!callInProgress) {
+                    console.log('Recebido callAccepted mas não estamos em chamada ativa. Criando interface de chamada.');
 
-                // Marcar a chamada como atendida
-                callAnswered = true;
+                    // Configurar informações do usuário para a chamada
+                    currentCallUser = {
+                        _id: data.accepterId,
+                        username: data.accepterName || 'Usuário'
+                    };
 
-                // Limpar o temporizador de timeout
-                if (callTimeoutTimer) {
-                    clearTimeout(callTimeoutTimer);
-                    callTimeoutTimer = null;
+                    // Atualizar interface
+                    document.getElementById('callUsername').textContent = currentCallUser.username;
+                    document.getElementById('callStatus').textContent = 'Conectado';
+
+                    // Mostrar interface de chamada
+                    callUI.style.display = 'flex';
+
+                    // Marcar chamada como em progresso e atendida
+                    callInProgress = true;
+                    callAnswered = true;
+                } else {
+                    // Já estamos em uma chamada, apenas atualizar a interface
+                    // Forçar atualização da interface
+                    document.getElementById('callStatus').textContent = 'Conectado';
+
+                    // Marcar a chamada como atendida
+                    callAnswered = true;
+
+                    // Limpar o temporizador de timeout
+                    if (callTimeoutTimer) {
+                        clearTimeout(callTimeoutTimer);
+                        callTimeoutTimer = null;
+                    }
                 }
 
                 // Iniciar o temporizador de chamada
@@ -442,6 +460,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Evento para chamada em grupo atendida
         window.socket.on('groupCallAnswered', (data) => {
             console.log('Chamada em grupo atendida:', data);
+            console.log('Estado atual da chamada:', {
+                callInProgress,
+                currentCallUser,
+                userInfo: window.userInfo,
+                groupCallAnswered: window.groupCallAnswered
+            });
 
             // Marcar a chamada em grupo como atendida
             if (window.groupCallTimeoutTimer) {
@@ -464,6 +488,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 console.log('Recebido evento de chamada em grupo, mas não estamos em uma chamada individual');
+
+                // Verificar se esta é uma chamada que iniciamos
+                if (window.userInfo && data.callerId === window.userInfo._id) {
+                    console.log('Esta é uma chamada em grupo que iniciamos');
+
+                    // Verificar se temos uma interface de chamada individual
+                    if (callUI && callUI.style.display !== 'flex') {
+                        // Configurar informações do usuário para a chamada
+                        currentCallUser = {
+                            _id: data.accepterId,
+                            username: 'Chamada em Grupo'
+                        };
+
+                        // Atualizar interface
+                        document.getElementById('callUsername').textContent = currentCallUser.username;
+                        document.getElementById('callStatus').textContent = 'Conectado';
+
+                        // Mostrar interface de chamada
+                        callUI.style.display = 'flex';
+
+                        // Marcar chamada como em progresso e atendida
+                        callInProgress = true;
+                        callAnswered = true;
+
+                        // Iniciar o temporizador de chamada
+                        startCallTimer();
+                    }
+                }
+
                 // Procurar por uma interface de chamada em grupo
                 const groupCallUI = document.getElementById('callUI');
                 if (groupCallUI) {

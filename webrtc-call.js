@@ -27,6 +27,9 @@ function initializeWebRTCCalls() {
         return;
     }
 
+    // Remover qualquer interface de chamada existente
+    removeExistingCallUIs();
+
     // Configurar interface
     setupCallUI();
 
@@ -34,6 +37,29 @@ function initializeWebRTCCalls() {
     setupSocketEvents();
 
     console.log('Sistema de chamadas WebRTC inicializado com sucesso');
+}
+
+// Remover interfaces de chamada existentes
+function removeExistingCallUIs() {
+    // Remover elementos com IDs específicos
+    const uiIds = ['webrtcCallUI', 'webrtcIncomingCallUI', 'callUI', 'incomingCallUI'];
+
+    uiIds.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            console.log(`Removendo interface existente: ${id}`);
+            element.remove();
+        }
+    });
+
+    // Remover qualquer outro elemento que possa estar relacionado a chamadas
+    const callElements = document.querySelectorAll('[id*="call"], [id*="Call"]');
+    callElements.forEach(element => {
+        if (!uiIds.includes(element.id) && element.id.toLowerCase().includes('call')) {
+            console.log(`Removendo elemento relacionado a chamada: ${element.id}`);
+            element.remove();
+        }
+    });
 }
 
 // Verificar se o navegador suporta WebRTC
@@ -180,14 +206,47 @@ async function startCall(userId, username) {
 
         console.log(`Iniciando chamada para ${username} (${userId})`);
 
-        // Solicitar acesso ao microfone
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Remover qualquer interface de chamada existente
+        removeExistingCallUIs();
+
+        // Recriar a interface de chamada
+        setupCallUI();
+
+        // Solicitar acesso ao microfone com tratamento de erro detalhado
+        try {
+            console.log('Solicitando acesso ao microfone...');
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: false
+            });
+            console.log('Acesso ao microfone concedido:', localStream);
+
+            // Verificar se o stream tem faixas de áudio
+            if (localStream.getAudioTracks().length === 0) {
+                throw new Error('Nenhuma faixa de áudio disponível no stream');
+            }
+
+            // Verificar se as faixas de áudio estão ativas
+            const audioTrack = localStream.getAudioTracks()[0];
+            console.log('Faixa de áudio:', audioTrack);
+            console.log('Estado da faixa de áudio:', audioTrack.enabled, audioTrack.readyState);
+
+            // Criar um elemento de áudio para teste local (opcional)
+            const testAudio = document.createElement('audio');
+            testAudio.srcObject = localStream;
+            testAudio.volume = 0; // Mudo para evitar feedback
+            document.body.appendChild(testAudio);
+        } catch (err) {
+            console.error('Erro ao acessar o microfone:', err);
+            throw err;
+        }
 
         // Configurar a chamada
         currentCall = {
             userId: userId,
             username: username,
-            direction: 'outgoing'
+            direction: 'outgoing',
+            startTime: Date.now()
         };
 
         // Inicializar conexão WebRTC
@@ -205,9 +264,16 @@ async function startCall(userId, username) {
             callerName: window.userInfo ? window.userInfo.username : 'Usuário'
         });
 
+        console.log('Notificação de chamada enviada para', userId);
+
         // Configurar temporizador de timeout
+        if (callTimeoutTimer) {
+            clearTimeout(callTimeoutTimer);
+        }
+
         callTimeoutTimer = setTimeout(() => {
             if (currentCall && currentCall.direction === 'outgoing') {
+                console.log('Timeout da chamada atingido');
                 alert('Ninguém atendeu a chamada');
                 endCall();
             }
@@ -355,7 +421,16 @@ function handleIncomingCall(data) {
 // Aceitar chamada recebida
 async function acceptCall() {
     try {
+        // Verificar se temos uma chamada atual
+        if (!currentCall) {
+            console.error('Tentando aceitar chamada, mas não há chamada atual');
+            return;
+        }
+
         console.log('Aceitando chamada de', currentCall.username);
+
+        // Remover qualquer interface de chamada existente, exceto a atual
+        removeExistingCallUIs();
 
         // Parar som de chamada (se implementado)
         if (window.stopRingtone) {
@@ -363,10 +438,32 @@ async function acceptCall() {
         }
 
         // Ocultar interface de chamada recebida
-        incomingCallUI.style.display = 'none';
+        if (incomingCallUI) {
+            incomingCallUI.style.display = 'none';
+        }
 
-        // Solicitar acesso ao microfone
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Solicitar acesso ao microfone com tratamento de erro detalhado
+        try {
+            console.log('Solicitando acesso ao microfone...');
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: false
+            });
+            console.log('Acesso ao microfone concedido:', localStream);
+
+            // Verificar se o stream tem faixas de áudio
+            if (localStream.getAudioTracks().length === 0) {
+                throw new Error('Nenhuma faixa de áudio disponível no stream');
+            }
+
+            // Verificar se as faixas de áudio estão ativas
+            const audioTrack = localStream.getAudioTracks()[0];
+            console.log('Faixa de áudio:', audioTrack);
+            console.log('Estado da faixa de áudio:', audioTrack.enabled, audioTrack.readyState);
+        } catch (err) {
+            console.error('Erro ao acessar o microfone:', err);
+            throw err;
+        }
 
         // Inicializar conexão WebRTC
         initializePeerConnection();
@@ -378,6 +475,14 @@ async function acceptCall() {
         window.socket.emit('acceptCall', {
             targetUserId: currentCall.userId
         });
+
+        console.log('Notificação de aceitação enviada para', currentCall.userId);
+
+        // Forçar atualização da interface após um curto período
+        setTimeout(() => {
+            showCallUI('Conectado');
+            startCallTimer();
+        }, 2000);
 
     } catch (error) {
         console.error('Erro ao aceitar chamada:', error);
@@ -413,9 +518,17 @@ function rejectCall() {
 // Lidar com chamada aceita
 function handleCallAccepted(data) {
     console.log('Chamada aceita:', data);
+    console.log('Estado atual da chamada:', currentCall);
 
-    if (!currentCall || currentCall.direction !== 'outgoing') {
+    // Verificar se estamos em uma chamada de saída
+    if (!currentCall) {
+        console.error('Recebido evento callAccepted, mas não estamos em uma chamada');
+        return;
+    }
+
+    if (currentCall.direction !== 'outgoing') {
         console.error('Recebido evento callAccepted, mas não estamos em uma chamada de saída');
+        console.log('Direção atual da chamada:', currentCall.direction);
         return;
     }
 
@@ -426,10 +539,21 @@ function handleCallAccepted(data) {
     }
 
     // Atualizar interface
-    document.getElementById('webrtcCallStatus').textContent = 'Conectado';
+    const statusElement = document.getElementById('webrtcCallStatus');
+    if (statusElement) {
+        statusElement.textContent = 'Conectado';
+    } else {
+        console.error('Elemento webrtcCallStatus não encontrado');
+    }
+
+    // Forçar atualização da interface
+    showCallUI('Conectado');
 
     // Iniciar temporizador de chamada
     startCallTimer();
+
+    // Notificar o usuário
+    console.log('Chamada conectada com', currentCall.username);
 }
 
 // Lidar com chamada rejeitada
@@ -609,13 +733,48 @@ function toggleMute() {
 
 // Mostrar interface de chamada
 function showCallUI(status) {
+    // Verificar se a interface existe
+    if (!callUI || !document.body.contains(callUI)) {
+        console.error('Interface de chamada não encontrada, recriando...');
+        setupCallUI();
+    }
+
+    // Verificar se temos uma chamada atual
+    if (!currentCall) {
+        console.error('Tentando mostrar interface de chamada, mas não há chamada atual');
+        return;
+    }
+
+    // Verificar se os elementos existem
+    const usernameElement = document.getElementById('webrtcCallUsername');
+    const statusElement = document.getElementById('webrtcCallStatus');
+    const timerElement = document.getElementById('webrtcCallTimer');
+
+    if (!usernameElement || !statusElement || !timerElement) {
+        console.error('Elementos da interface de chamada não encontrados');
+        console.log('Elementos encontrados:', {
+            usernameElement: !!usernameElement,
+            statusElement: !!statusElement,
+            timerElement: !!timerElement
+        });
+        return;
+    }
+
     // Atualizar interface
-    document.getElementById('webrtcCallUsername').textContent = currentCall.username;
-    document.getElementById('webrtcCallStatus').textContent = status || 'Chamando...';
-    document.getElementById('webrtcCallTimer').textContent = '00:00';
+    usernameElement.textContent = currentCall.username;
+    statusElement.textContent = status || 'Chamando...';
+    timerElement.textContent = '00:00';
 
     // Mostrar interface
     callUI.style.display = 'flex';
+
+    // Trazer para frente
+    callUI.style.zIndex = '1000';
+
+    console.log('Interface de chamada atualizada:', {
+        username: currentCall.username,
+        status: status || 'Chamando...'
+    });
 }
 
 // Temporizador de chamada

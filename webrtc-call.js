@@ -810,17 +810,24 @@ window.webrtcCall = {
     isCallActive: () => !!currentCall
 };
 
-// Inicializar automaticamente quando o documento estiver pronto
-document.addEventListener('DOMContentLoaded', () => {
-    // Verificar se o script Font Awesome está carregado
+// NÃO inicializar automaticamente - apenas exportar as funções
+// Isso evita que o exemplo de chamada apareça automaticamente
+
+// Adicionar Font Awesome se necessário
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
     if (!document.querySelector('link[href*="font-awesome"]')) {
-        // Adicionar Font Awesome
         const fontAwesome = document.createElement('link');
         fontAwesome.rel = 'stylesheet';
         fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
         document.head.appendChild(fontAwesome);
     }
-
-    // Inicializar sistema de chamadas WebRTC
-    setTimeout(initializeWebRTCCalls, 1000); // Atraso para garantir que o socket esteja disponível
-});
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!document.querySelector('link[href*="font-awesome"]')) {
+            const fontAwesome = document.createElement('link');
+            fontAwesome.rel = 'stylesheet';
+            fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
+            document.head.appendChild(fontAwesome);
+        }
+    });
+}

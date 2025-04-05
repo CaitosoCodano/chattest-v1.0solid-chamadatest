@@ -12,6 +12,7 @@ let callTimeoutTimer = null;
 let callTimerInterval = null;
 let callDurationSeconds = 0;
 let isMuted = false;
+let pendingIceCandidates = []; // Candidatos ICE pendentes
 
 // Variáveis para monitoramento do microfone
 let micMonitorActive = false;
@@ -332,14 +333,31 @@ function initializePeerConnection() {
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
-            // Em um ambiente de produção, você deve adicionar servidores TURN
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Servidores TURN públicos gratuitos (podem ter limitações)
+            {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            }
         ],
         iceCandidatePoolSize: 10,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require',
         sdpSemantics: 'unified-plan'
     };
+
+    console.log('Inicializando conexão WebRTC com configuração:', configuration);
 
     // Criar conexão peer
     peerConnection = new RTCPeerConnection(configuration);
@@ -352,12 +370,23 @@ function initializePeerConnection() {
     // Lidar com candidatos ICE
     peerConnection.onicecandidate = event => {
         if (event.candidate && currentCall) {
-            console.log('Enviando candidato ICE:', event.candidate);
+            console.log('Candidato ICE gerado:', event.candidate);
+
+            // Enviar candidato ICE para o outro usuário
             window.socket.emit('iceCandidate', {
                 targetUserId: currentCall.userId,
                 candidate: event.candidate
             });
+
+            console.log('Candidato ICE enviado para', currentCall.userId);
+        } else if (!event.candidate) {
+            console.log('Coleta de candidatos ICE concluída');
         }
+    };
+
+    // Lidar com estado de coleta de candidatos ICE
+    peerConnection.onicegatheringstatechange = () => {
+        console.log('Estado de coleta de candidatos ICE:', peerConnection.iceGatheringState);
     };
 
     // Lidar com mudanças de estado de conexão ICE
@@ -375,6 +404,7 @@ function initializePeerConnection() {
     // Lidar com stream remoto
     peerConnection.ontrack = event => {
         console.log('Stream remoto recebido:', event.streams[0]);
+        console.log('Faixas de áudio no stream remoto:', event.streams[0].getAudioTracks());
         remoteStream = event.streams[0];
 
         // Adicionar áudio remoto à interface
@@ -383,68 +413,145 @@ function initializePeerConnection() {
             // Remover qualquer áudio existente
             audioContainer.innerHTML = '';
 
-            // Criar elemento de áudio com controles e configurações avançadas
-            const audioElement = document.createElement('audio');
-            audioElement.id = 'remoteAudio';
-            audioElement.autoplay = true;
-            audioElement.playsInline = true; // Importante para iOS
-            audioElement.controls = false; // Sem controles visuais, mas podemos habilitar para debug
-            audioElement.volume = 1.0; // Volume máximo
-            audioElement.srcObject = remoteStream;
+            // Verificar se o stream tem faixas de áudio
+            if (remoteStream.getAudioTracks().length === 0) {
+                console.error('Stream remoto não tem faixas de áudio');
+                updateSpeakerStatus(false, 'Sem áudio');
 
-            // Configurações adicionais para garantir a reprodução
-            audioElement.setAttribute('playsinline', ''); // Redundante, mas importante para iOS
-            audioElement.muted = false;
+                // Tentar novamente em 2 segundos
+                setTimeout(() => {
+                    if (remoteStream && remoteStream.getAudioTracks().length > 0) {
+                        console.log('Faixas de áudio encontradas após atraso');
+                        setupRemoteAudio(audioContainer);
+                    } else {
+                        console.error('Ainda sem faixas de áudio após atraso');
+                    }
+                }, 2000);
 
-            // Adicionar evento para verificar se o áudio está sendo reproduzido
-            audioElement.onplay = () => {
-                console.log('Áudio remoto está sendo reproduzido');
+                return;
+            }
 
-                // Atualizar status do alto-falante
-                updateSpeakerStatus(true);
-            };
+            setupRemoteAudio(audioContainer);
+        }
+    };
 
-            audioElement.onerror = (e) => {
-                console.error('Erro ao reproduzir áudio remoto:', e);
+    // Lidar com mudanças de estado de conexão
+    peerConnection.onconnectionstatechange = () => {
+        console.log('Estado de conexão WebRTC:', peerConnection.connectionState);
 
-                // Atualizar status do alto-falante
-                updateSpeakerStatus(false, e.message);
-            };
-
-            // Verificar se o áudio está sendo reproduzido periodicamente
-            setInterval(() => {
-                if (audioElement.paused) {
-                    console.warn('Áudio remoto está pausado, tentando reproduzir novamente');
-                    audioElement.play().catch(e => {
-                        console.error('Erro ao retomar reprodução de áudio:', e);
-                    });
-                    updateSpeakerStatus(false, 'Pausado');
-                } else {
-                    updateSpeakerStatus(true);
-                }
-            }, 5000);
-
-            // Adicionar ao container
-            audioContainer.appendChild(audioElement);
-
-            // Forçar a reprodução (importante para alguns navegadores)
-            audioElement.play().catch(e => {
-                console.error('Erro ao iniciar reprodução de áudio:', e);
-                // Atualizar status do alto-falante
-                updateSpeakerStatus(false, 'Erro de reprodução');
-
-                // Tentar novamente com interação do usuário
-                alert('Clique em OK para ativar o áudio da chamada');
-                audioElement.play().catch(e2 => {
-                    console.error('Falha na segunda tentativa de reprodução de áudio:', e2);
-                    updateSpeakerStatus(false, 'Falha na reprodução');
-                });
-            });
+        if (peerConnection.connectionState === 'connected') {
+            console.log('Conexão WebRTC estabelecida com sucesso!');
+            // Verificar se temos áudio remoto
+            if (remoteStream && remoteStream.getAudioTracks().length > 0) {
+                console.log('Faixas de áudio disponíveis no stream remoto');
+            } else {
+                console.warn('Conexão estabelecida, mas sem faixas de áudio');
+            }
+        } else if (peerConnection.connectionState === 'failed' ||
+                   peerConnection.connectionState === 'disconnected' ||
+                   peerConnection.connectionState === 'closed') {
+            console.error('Conexão WebRTC falhou ou foi fechada');
+            alert('A conexão de chamada foi perdida. Tentando reconectar...');
+            // Tentar reconectar
+            if (currentCall) {
+                setTimeout(() => {
+                    if (currentCall) {
+                        createAndSendOffer();
+                    }
+                }, 1000);
+            }
         }
     };
 
     // Atualizar status do microfone
     updateMicrophoneStatus(true);
+}
+
+// Função para configurar o áudio remoto
+function setupRemoteAudio(container) {
+    if (!remoteStream) {
+        console.error('Stream remoto não disponível');
+        return;
+    }
+
+    // Criar elemento de áudio com controles e configurações avançadas
+    const audioElement = document.createElement('audio');
+    audioElement.id = 'remoteAudio';
+    audioElement.autoplay = true;
+    audioElement.playsInline = true; // Importante para iOS
+    audioElement.controls = true; // Adicionar controles para debug
+    audioElement.volume = 1.0; // Volume máximo
+    audioElement.srcObject = remoteStream;
+
+    // Configurações adicionais para garantir a reprodução
+    audioElement.setAttribute('playsinline', ''); // Redundante, mas importante para iOS
+    audioElement.muted = false;
+
+    // Adicionar evento para verificar se o áudio está sendo reproduzido
+    audioElement.onplay = () => {
+        console.log('Áudio remoto está sendo reproduzido');
+        // Atualizar status do alto-falante
+        updateSpeakerStatus(true);
+    };
+
+    audioElement.onerror = (e) => {
+        console.error('Erro ao reproduzir áudio remoto:', e);
+        // Atualizar status do alto-falante
+        updateSpeakerStatus(false, e.message);
+    };
+
+    // Adicionar evento para verificar se há dados de áudio
+    audioElement.onloadedmetadata = () => {
+        console.log('Metadados de áudio carregados:', audioElement.duration);
+    };
+
+    // Adicionar evento para verificar se o áudio está tocando
+    audioElement.onplaying = () => {
+        console.log('Áudio remoto está tocando');
+    };
+
+    // Verificar se o áudio está sendo reproduzido periodicamente
+    const audioCheckInterval = setInterval(() => {
+        if (!remoteStream || !audioElement) {
+            clearInterval(audioCheckInterval);
+            return;
+        }
+
+        if (audioElement.paused) {
+            console.warn('Áudio remoto está pausado, tentando reproduzir novamente');
+            audioElement.play().catch(e => {
+                console.error('Erro ao retomar reprodução de áudio:', e);
+            });
+            updateSpeakerStatus(false, 'Pausado');
+        } else {
+            // Verificar se há atividade de áudio
+            if (remoteStream.getAudioTracks().length > 0) {
+                const audioTrack = remoteStream.getAudioTracks()[0];
+                if (audioTrack.enabled && audioTrack.readyState === 'live') {
+                    updateSpeakerStatus(true);
+                } else {
+                    updateSpeakerStatus(false, 'Faixa inativa');
+                }
+            }
+        }
+    }, 2000);
+
+    // Adicionar ao container
+    container.appendChild(audioElement);
+
+    // Forçar a reprodução (importante para alguns navegadores)
+    audioElement.play().catch(e => {
+        console.error('Erro ao iniciar reprodução de áudio:', e);
+        // Atualizar status do alto-falante
+        updateSpeakerStatus(false, 'Erro de reprodução');
+
+        // Tentar novamente com interação do usuário
+        alert('Clique em OK para ativar o áudio da chamada');
+        audioElement.play().catch(e2 => {
+            console.error('Falha na segunda tentativa de reprodução de áudio:', e2);
+            updateSpeakerStatus(false, 'Falha na reprodução');
+        });
+    });
 }
 
 // Criar e enviar oferta SDP
@@ -455,21 +562,74 @@ async function createAndSendOffer() {
             return;
         }
 
-        // Criar oferta
+        // Verificar se já temos uma descrição local
+        if (peerConnection.signalingState !== 'stable') {
+            console.log('Estado de sinalização não estável, aguardando...');
+            // Aguardar até que o estado de sinalização esteja estável
+            await new Promise(resolve => {
+                const checkState = () => {
+                    if (peerConnection.signalingState === 'stable') {
+                        resolve();
+                    } else {
+                        setTimeout(checkState, 500);
+                    }
+                };
+                checkState();
+            });
+        }
+
+        console.log('Criando oferta SDP...');
+
+        // Criar oferta com configurações específicas
         const offer = await peerConnection.createOffer({
-            offerToReceiveAudio: true
+            offerToReceiveAudio: true,
+            voiceActivityDetection: true
         });
+
+        // Modificar SDP para melhorar a qualidade de áudio
+        let sdp = offer.sdp;
+
+        // Aumentar a prioridade do áudio
+        sdp = sdp.replace('a=group:BUNDLE 0', 'a=group:BUNDLE audio');
+        sdp = sdp.replace('a=mid:0', 'a=mid:audio');
+
+        // Definir codec de áudio de alta qualidade
+        if (sdp.includes('opus/48000/2')) {
+            console.log('Configurando codec Opus para alta qualidade');
+            // Adicionar parâmetros para melhorar a qualidade do áudio
+            const opusLine = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/i);
+            if (opusLine && opusLine.length > 1) {
+                const opusPayloadType = opusLine[1];
+                const fmtpLine = `a=fmtp:${opusPayloadType} minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=510000`;
+
+                // Verificar se já existe uma linha fmtp para opus
+                const existingFmtp = new RegExp(`a=fmtp:${opusPayloadType}.*`, 'g');
+                if (sdp.match(existingFmtp)) {
+                    // Substituir a linha existente
+                    sdp = sdp.replace(existingFmtp, fmtpLine);
+                } else {
+                    // Adicionar nova linha após a linha rtpmap do opus
+                    sdp = sdp.replace(opusLine[0], `${opusLine[0]}\r\n${fmtpLine}`);
+                }
+            }
+        }
+
+        // Atualizar SDP na oferta
+        offer.sdp = sdp;
+        console.log('SDP modificado para melhorar qualidade de áudio');
 
         // Definir descrição local
         await peerConnection.setLocalDescription(offer);
 
-        console.log('Oferta criada:', offer);
+        console.log('Oferta criada e definida como descrição local');
 
         // Enviar oferta para o destinatário
         window.socket.emit('offer', {
             targetUserId: currentCall.userId,
             offer: offer
         });
+
+        console.log('Oferta enviada para', currentCall.userId);
 
     } catch (error) {
         console.error('Erro ao criar oferta:', error);
@@ -677,7 +837,7 @@ function handleCallRejected(data) {
 }
 
 // Lidar com candidato ICE recebido
-function handleIceCandidate(data) {
+async function handleIceCandidate(data) {
     const { senderId, candidate } = data;
 
     console.log('Candidato ICE recebido de', senderId);
@@ -688,10 +848,22 @@ function handleIceCandidate(data) {
     }
 
     try {
+        // Verificar se já temos uma descrição remota
+        if (!peerConnection.remoteDescription || !peerConnection.remoteDescription.type) {
+            // Ainda não temos uma descrição remota, armazenar o candidato para adicionar mais tarde
+            console.log('Armazenando candidato ICE para adicionar mais tarde');
+            pendingIceCandidates.push(new RTCIceCandidate(candidate));
+            return;
+        }
+
         // Adicionar candidato ICE à conexão peer
-        peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('Adicionando candidato ICE à conexão');
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('Candidato ICE adicionado com sucesso');
     } catch (error) {
         console.error('Erro ao adicionar candidato ICE:', error);
+        // Armazenar o candidato para tentar adicionar mais tarde
+        pendingIceCandidates.push(new RTCIceCandidate(candidate));
     }
 }
 
@@ -700,6 +872,7 @@ async function handleOffer(data) {
     const { senderId, offer } = data;
 
     console.log('Oferta recebida de', senderId);
+    console.log('Conteúdo da oferta:', offer);
 
     if (!peerConnection || !currentCall || currentCall.userId !== senderId) {
         console.error('Recebido oferta, mas não estamos em uma chamada com este usuário');
@@ -707,22 +880,89 @@ async function handleOffer(data) {
     }
 
     try {
+        // Verificar se a oferta tem um SDP válido
+        if (!offer || !offer.sdp) {
+            console.error('Oferta SDP inválida recebida');
+            return;
+        }
+
+        // Verificar se já temos uma descrição remota
+        if (peerConnection.currentRemoteDescription) {
+            console.log('Já temos uma descrição remota, ignorando oferta duplicada');
+            return;
+        }
+
+        console.log('Definindo descrição remota da oferta...');
+
         // Definir descrição remota
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
 
-        // Criar resposta
-        const answer = await peerConnection.createAnswer();
+        console.log('Descrição remota definida com sucesso');
+
+        // Adicionar candidatos ICE pendentes
+        if (pendingIceCandidates.length > 0) {
+            console.log(`Adicionando ${pendingIceCandidates.length} candidatos ICE pendentes`);
+            for (const candidate of pendingIceCandidates) {
+                try {
+                    await peerConnection.addIceCandidate(candidate);
+                } catch (e) {
+                    console.error('Erro ao adicionar candidato ICE pendente:', e);
+                }
+            }
+            pendingIceCandidates = [];
+        }
+
+        console.log('Criando resposta...');
+
+        // Criar resposta com configurações específicas
+        const answer = await peerConnection.createAnswer({
+            voiceActivityDetection: true
+        });
+
+        // Modificar SDP para melhorar a qualidade de áudio
+        let sdp = answer.sdp;
+
+        // Aumentar a prioridade do áudio
+        sdp = sdp.replace('a=group:BUNDLE 0', 'a=group:BUNDLE audio');
+        sdp = sdp.replace('a=mid:0', 'a=mid:audio');
+
+        // Definir codec de áudio de alta qualidade
+        if (sdp.includes('opus/48000/2')) {
+            console.log('Configurando codec Opus para alta qualidade na resposta');
+            // Adicionar parâmetros para melhorar a qualidade do áudio
+            const opusLine = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/i);
+            if (opusLine && opusLine.length > 1) {
+                const opusPayloadType = opusLine[1];
+                const fmtpLine = `a=fmtp:${opusPayloadType} minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=510000`;
+
+                // Verificar se já existe uma linha fmtp para opus
+                const existingFmtp = new RegExp(`a=fmtp:${opusPayloadType}.*`, 'g');
+                if (sdp.match(existingFmtp)) {
+                    // Substituir a linha existente
+                    sdp = sdp.replace(existingFmtp, fmtpLine);
+                } else {
+                    // Adicionar nova linha após a linha rtpmap do opus
+                    sdp = sdp.replace(opusLine[0], `${opusLine[0]}\r\n${fmtpLine}`);
+                }
+            }
+        }
+
+        // Atualizar SDP na resposta
+        answer.sdp = sdp;
+        console.log('SDP modificado para melhorar qualidade de áudio na resposta');
 
         // Definir descrição local
         await peerConnection.setLocalDescription(answer);
 
-        console.log('Resposta criada:', answer);
+        console.log('Resposta criada e definida como descrição local');
 
         // Enviar resposta para o remetente
         window.socket.emit('answer', {
             targetUserId: senderId,
             answer: answer
         });
+
+        console.log('Resposta enviada para', senderId);
 
     } catch (error) {
         console.error('Erro ao processar oferta:', error);
@@ -736,6 +976,7 @@ async function handleAnswer(data) {
     const { senderId, answer } = data;
 
     console.log('Resposta recebida de', senderId);
+    console.log('Conteúdo da resposta:', answer);
 
     if (!peerConnection || !currentCall || currentCall.userId !== senderId) {
         console.error('Recebido resposta, mas não estamos em uma chamada com este usuário');
@@ -743,8 +984,39 @@ async function handleAnswer(data) {
     }
 
     try {
+        // Verificar se a resposta tem um SDP válido
+        if (!answer || !answer.sdp) {
+            console.error('Resposta SDP inválida recebida');
+            return;
+        }
+
+        // Verificar se já temos uma descrição remota
+        if (peerConnection.currentRemoteDescription) {
+            console.log('Já temos uma descrição remota, ignorando resposta duplicada');
+            return;
+        }
+
+        console.log('Definindo descrição remota...');
+
         // Definir descrição remota
         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+
+        console.log('Descrição remota definida com sucesso');
+        console.log('Estado de sinalização:', peerConnection.signalingState);
+        console.log('Estado de conexão ICE:', peerConnection.iceConnectionState);
+
+        // Verificar se temos candidatos ICE pendentes para adicionar
+        if (pendingIceCandidates && pendingIceCandidates.length > 0) {
+            console.log(`Adicionando ${pendingIceCandidates.length} candidatos ICE pendentes`);
+            for (const candidate of pendingIceCandidates) {
+                try {
+                    await peerConnection.addIceCandidate(candidate);
+                } catch (e) {
+                    console.error('Erro ao adicionar candidato ICE pendente:', e);
+                }
+            }
+            pendingIceCandidates = [];
+        }
     } catch (error) {
         console.error('Erro ao processar resposta:', error);
         alert('Erro ao estabelecer conexão de chamada');

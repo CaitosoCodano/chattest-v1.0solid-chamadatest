@@ -500,6 +500,22 @@ function initializePeerConnection() {
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
+            },
+            // Servidores TURN adicionais
+            {
+                urls: 'turn:relay.metered.ca:80',
+                username: 'e7d69958f8c4c5e4868651',
+                credential: 'Yzf5HYPrMGBfkM/E'
+            },
+            {
+                urls: 'turn:relay.metered.ca:443',
+                username: 'e7d69958f8c4c5e4868651',
+                credential: 'Yzf5HYPrMGBfkM/E'
+            },
+            {
+                urls: 'turn:relay.metered.ca:443?transport=tcp',
+                username: 'e7d69958f8c4c5e4868651',
+                credential: 'Yzf5HYPrMGBfkM/E'
             }
         ],
         iceCandidatePoolSize: 10,
@@ -513,9 +529,54 @@ function initializePeerConnection() {
     // Criar conexão peer
     peerConnection = new RTCPeerConnection(configuration);
 
-    // Adicionar stream de áudio local
+    // Adicionar stream de áudio local com configurações avançadas
     localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
+        console.log(`Adicionando faixa ${track.kind} à conexão peer:`, track);
+
+        // Configurar parâmetros de áudio se for uma faixa de áudio
+        if (track.kind === 'audio') {
+            // Tentar obter e configurar as restrições de áudio
+            try {
+                const constraints = {
+                    autoGainControl: true,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    channelCount: 1,
+                    sampleRate: 48000,
+                    sampleSize: 16
+                };
+
+                track.applyConstraints(constraints)
+                    .then(() => console.log('Restrições de áudio aplicadas com sucesso'))
+                    .catch(e => console.error('Erro ao aplicar restrições de áudio:', e));
+            } catch (e) {
+                console.error('Erro ao configurar restrições de áudio:', e);
+            }
+        }
+
+        // Adicionar a faixa à conexão peer
+        const sender = peerConnection.addTrack(track, localStream);
+
+        // Configurar parâmetros de envio se disponível
+        if (sender && sender.setParameters && sender.getParameters) {
+            try {
+                const parameters = sender.getParameters();
+                if (!parameters.degradationPreference) {
+                    parameters.degradationPreference = 'maintain-quality';
+                }
+                if (parameters.encodings && parameters.encodings.length > 0) {
+                    parameters.encodings.forEach(encoding => {
+                        encoding.priority = 'high';
+                        encoding.networkPriority = 'high';
+                    });
+                }
+                sender.setParameters(parameters)
+                    .then(() => console.log('Parâmetros de envio configurados com sucesso'))
+                    .catch(e => console.error('Erro ao configurar parâmetros de envio:', e));
+            } catch (e) {
+                console.error('Erro ao configurar parâmetros de envio:', e);
+            }
+        }
     });
 
     // Lidar com candidatos ICE
@@ -1559,13 +1620,28 @@ function showCallUI(status) {
 
 // Temporizador de chamada
 function startCallTimer() {
+    // Limpar qualquer temporizador existente
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+    }
+
+    // Resetar contador
     callDurationSeconds = 0;
     updateCallTimerDisplay();
 
+    // Registrar o tempo de início
+    const startTime = Date.now();
+
+    // Iniciar novo temporizador
     callTimerInterval = setInterval(() => {
-        callDurationSeconds++;
+        // Calcular a duração com base no tempo real decorrido
+        const elapsedTime = Date.now() - startTime;
+        callDurationSeconds = Math.floor(elapsedTime / 1000);
         updateCallTimerDisplay();
     }, 1000);
+
+    console.log('Temporizador de chamada iniciado');
 }
 
 function stopCallTimer() {

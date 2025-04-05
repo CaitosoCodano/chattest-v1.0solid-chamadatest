@@ -5,7 +5,7 @@
 
 const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
     console.log('Registrando eventos de sinalização WebRTC para o socket:', socket.id);
-    
+
     // Iniciar chamada
     socket.on('callUser', (data) => {
         const { targetUserId, callerName } = data;
@@ -29,10 +29,10 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
                 break;
             }
         }
-        
+
         if (!targetSocketId) {
             console.log(`Não foi encontrado socket para o usuário ${targetUserId}`);
-            socket.emit('callRejected', { 
+            socket.emit('callRejected', {
                 reason: 'Usuário não está online ou não foi possível encontrar o socket',
                 targetUserId
             });
@@ -72,37 +72,61 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
                 break;
             }
         }
-        
+
         if (!targetSocketId) {
             console.log(`Não foi encontrado socket para o usuário ${targetUserId}. Tentando buscar por todos os sockets.`);
             // Tentar encontrar qualquer socket que possa estar relacionado ao chamador
             for (const [socketId, userId] of connectedUsers.entries()) {
                 console.log(`Verificando socket ${socketId} para usuário ${userId}`);
             }
-            
-            socket.emit('callFailed', { 
+
+            socket.emit('callFailed', {
                 reason: 'O usuário que iniciou a chamada não está mais disponível',
                 targetUserId
             });
             return;
         }
 
-        // Notificar o chamador que a chamada foi aceita
-        io.to(targetSocketId).emit('callAccepted', { 
-            accepterId,
-            accepterName: 'Usuário', // Idealmente, buscar o nome do usuário do banco de dados
-            callerId: targetUserId,
-            message: 'Chamada aceita com sucesso',
-            timestamp: Date.now()
-        });
-        console.log(`Notificação de aceitação enviada para ${targetUserId} (socket ${targetSocketId})`);
-        
+        // Buscar o nome do usuário que aceitou a chamada
+        // Vamos usar o MongoDB para buscar o nome do usuário
+        const User = require('./models/User');
+
+        // Buscar o nome do usuário de forma assíncrona
+        User.findById(accepterId)
+            .then(user => {
+                const accepterName = user ? user.username : 'Usuário';
+                console.log(`Nome do usuário que aceitou a chamada: ${accepterName}`);
+
+                // Notificar o chamador que a chamada foi aceita
+                io.to(targetSocketId).emit('callAccepted', {
+                    accepterId,
+                    accepterName, // Usar o nome real do usuário
+                    callerId: targetUserId,
+                    message: 'Chamada aceita com sucesso',
+                    timestamp: Date.now()
+                });
+                console.log(`Notificação de aceitação enviada para ${targetUserId} (socket ${targetSocketId})`);
+            })
+            .catch(err => {
+                console.error('Erro ao buscar nome do usuário:', err);
+
+                // Notificar o chamador que a chamada foi aceita (com nome padrão)
+                io.to(targetSocketId).emit('callAccepted', {
+                    accepterId,
+                    accepterName: 'Usuário', // Nome padrão em caso de erro
+                    callerId: targetUserId,
+                    message: 'Chamada aceita com sucesso',
+                    timestamp: Date.now()
+                });
+                console.log(`Notificação de aceitação enviada para ${targetUserId} (socket ${targetSocketId}) com nome padrão`);
+            });
+
         // Notificar o aceitador que a chamada foi conectada com sucesso
         socket.emit('callConnected', {
             targetUserId,
             message: 'Chamada conectada com sucesso'
         });
-        
+
         // Notificar todos os sockets que uma chamada em grupo foi atendida
         // Isso é usado para evitar a mensagem "Nenhum contato atendeu a chamada"
         io.emit('groupCallAnswered', {
@@ -135,7 +159,7 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
 
         if (targetSocketId) {
             // Notificar o chamador que a chamada foi rejeitada
-            io.to(targetSocketId).emit('callRejected', { 
+            io.to(targetSocketId).emit('callRejected', {
                 rejecterId,
                 reason: reason || 'Chamada rejeitada pelo usuário'
             });
@@ -166,7 +190,7 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
 
         if (targetSocketId) {
             // Notificar o outro usuário que a chamada foi encerrada
-            io.to(targetSocketId).emit('callEnded', { 
+            io.to(targetSocketId).emit('callEnded', {
                 enderId,
                 message: 'Chamada encerrada pelo outro usuário'
             });
@@ -197,7 +221,7 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
 
         if (targetSocketId) {
             // Encaminhar oferta para o destinatário
-            io.to(targetSocketId).emit('offer', { 
+            io.to(targetSocketId).emit('offer', {
                 senderId,
                 offer
             });
@@ -228,7 +252,7 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
 
         if (targetSocketId) {
             // Encaminhar resposta para o destinatário
-            io.to(targetSocketId).emit('answer', { 
+            io.to(targetSocketId).emit('answer', {
                 senderId,
                 answer
             });
@@ -259,7 +283,7 @@ const registerWebRTCSignalingServer = (io, socket, connectedUsers) => {
 
         if (targetSocketId) {
             // Encaminhar candidato ICE para o destinatário
-            io.to(targetSocketId).emit('iceCandidate', { 
+            io.to(targetSocketId).emit('iceCandidate', {
                 senderId,
                 candidate
             });

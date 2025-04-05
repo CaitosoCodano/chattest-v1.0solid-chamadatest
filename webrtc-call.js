@@ -13,6 +13,12 @@ let callTimerInterval = null;
 let callDurationSeconds = 0;
 let isMuted = false;
 
+// Variáveis para monitoramento do microfone
+let micMonitorActive = false;
+let micMonitorNode = null;
+let micMonitorGainNode = null;
+let audioContext = null;
+
 // Elementos da interface
 let callUI = null;
 let incomingCallUI = null;
@@ -123,9 +129,12 @@ function setupCallUI() {
                 </div>
             </div>
         </div>
-        <div style="display: flex; gap: 20px;">
+        <div style="display: flex; gap: 20px;" class="call-controls">
             <button id="webrtcToggleMuteButton" style="width: 50px; height: 50px; border-radius: 50%; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
                 <i class="fas fa-microphone"></i>
+            </button>
+            <button id="webrtcToggleMonitorButton" style="width: 50px; height: 50px; border-radius: 50%; border: none; background-color: #9e9e9e; color: white; cursor: pointer;" title="Ativar monitoramento do microfone">
+                <i class="fas fa-headphones-alt"></i>
             </button>
             <button id="webrtcEndCallButton" style="width: 50px; height: 50px; border-radius: 50%; border: none; background-color: #ff4d4d; color: white; cursor: pointer;">
                 <i class="fas fa-phone-slash"></i>
@@ -182,9 +191,17 @@ function setupCallUI() {
 
     // Configurar eventos de clique
     document.getElementById('webrtcToggleMuteButton').addEventListener('click', toggleMute);
+    document.getElementById('webrtcToggleMonitorButton').addEventListener('click', toggleMicrophoneMonitor);
     document.getElementById('webrtcEndCallButton').addEventListener('click', endCall);
     document.getElementById('webrtcAcceptCallButton').addEventListener('click', acceptCall);
     document.getElementById('webrtcRejectCallButton').addEventListener('click', rejectCall);
+
+    // Verificar configuração de monitoramento do microfone
+    const savedMonitorState = localStorage.getItem('micMonitorActive');
+    if (savedMonitorState === 'true') {
+        micMonitorActive = true;
+        updateMonitorButton();
+    }
 }
 
 // Configurar eventos de socket para sinalização WebRTC
@@ -558,6 +575,11 @@ async function acceptCall() {
         setTimeout(() => {
             showCallUI('Conectado');
             startCallTimer();
+
+            // Iniciar monitoramento do microfone se ativado
+            if (micMonitorActive) {
+                startMicrophoneMonitor();
+            }
         }, 2000);
 
     } catch (error) {
@@ -627,6 +649,11 @@ function handleCallAccepted(data) {
 
     // Iniciar temporizador de chamada
     startCallTimer();
+
+    // Iniciar monitoramento do microfone se ativado
+    if (micMonitorActive) {
+        startMicrophoneMonitor();
+    }
 
     // Notificar o usuário
     console.log('Chamada conectada com', currentCall.username);
@@ -782,6 +809,15 @@ function endCall(notifyServer = true) {
     const muteButton = document.getElementById('webrtcToggleMuteButton');
     if (muteButton) {
         muteButton.innerHTML = '<i class="fas fa-microphone"></i>';
+    }
+
+    // Parar monitoramento do microfone
+    stopMicrophoneMonitor();
+
+    // Limpar contexto de áudio
+    if (audioContext && audioContext.state !== 'closed') {
+        audioContext.close().catch(e => console.error('Erro ao fechar contexto de áudio:', e));
+        audioContext = null;
     }
 }
 
@@ -1034,12 +1070,171 @@ function updateCallTimerDisplay() {
     document.getElementById('webrtcCallTimer').textContent = `${minutes}:${seconds}`;
 }
 
+// Função para iniciar o monitoramento do microfone (ouvir a própria voz)
+function startMicrophoneMonitor() {
+    if (!localStream || !micMonitorActive) {
+        console.log('Não é possível iniciar o monitoramento do microfone: stream não disponível ou monitoramento desativado');
+        return;
+    }
+
+    try {
+        // Criar contexto de áudio se não existir
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // Criar nó de fonte de mídia
+        if (!micMonitorNode) {
+            micMonitorNode = audioContext.createMediaStreamSource(localStream);
+        }
+
+        // Criar nó de ganho para controlar o volume
+        if (!micMonitorGainNode) {
+            micMonitorGainNode = audioContext.createGain();
+            // Obter volume salvo ou usar padrão
+            const savedVolume = localStorage.getItem('micMonitorVolume');
+            micMonitorGainNode.gain.value = savedVolume ? parseFloat(savedVolume) : 0.5; // Volume em 50% para evitar feedback
+        }
+
+        // Conectar nós
+        micMonitorNode.connect(micMonitorGainNode);
+        micMonitorGainNode.connect(audioContext.destination);
+
+        console.log('Monitoramento do microfone iniciado - agora você pode ouvir sua própria voz');
+
+        // Adicionar controle de volume
+        addVolumeControl();
+
+    } catch (error) {
+        console.error('Erro ao iniciar monitoramento do microfone:', error);
+    }
+}
+
+// Função para parar o monitoramento do microfone
+function stopMicrophoneMonitor() {
+    if (micMonitorGainNode) {
+        micMonitorGainNode.disconnect();
+        micMonitorGainNode = null;
+    }
+
+    if (micMonitorNode) {
+        micMonitorNode.disconnect();
+        micMonitorNode = null;
+    }
+
+    // Remover controle de volume
+    const volumeControl = document.getElementById('micMonitorVolumeControl');
+    if (volumeControl) {
+        volumeControl.remove();
+    }
+
+    console.log('Monitoramento do microfone parado');
+}
+
+// Função para adicionar controle de volume
+function addVolumeControl() {
+    // Verificar se já existe
+    if (document.getElementById('micMonitorVolumeControl')) {
+        return;
+    }
+
+    // Verificar se a interface de chamada existe
+    const callControls = document.querySelector('.call-controls');
+    if (!callControls) {
+        console.log('Interface de chamada não encontrada, não é possível adicionar controle de volume');
+        return;
+    }
+
+    // Criar container
+    const volumeControl = document.createElement('div');
+    volumeControl.id = 'micMonitorVolumeControl';
+    volumeControl.style.marginTop = '15px';
+    volumeControl.style.width = '100%';
+    volumeControl.style.textAlign = 'center';
+    volumeControl.style.fontSize = '12px';
+    volumeControl.style.color = '#666';
+
+    // Obter volume atual
+    const currentVolume = micMonitorGainNode ? Math.round(micMonitorGainNode.gain.value * 100) : 50;
+
+    // Criar HTML do controle
+    volumeControl.innerHTML = `
+        <div style="margin-bottom: 5px;">Volume do monitoramento: <span id="volumeValue">${currentVolume}%</span></div>
+        <input type="range" id="volumeSlider" min="0" max="100" value="${currentVolume}" style="width: 80%;">
+    `;
+
+    // Adicionar ao final da interface de chamada
+    const callUI = document.getElementById('webrtcCallUI');
+    if (callUI) {
+        callUI.appendChild(volumeControl);
+
+        // Adicionar evento ao slider
+        const slider = document.getElementById('volumeSlider');
+        if (slider) {
+            slider.addEventListener('input', function() {
+                if (micMonitorGainNode) {
+                    // Converter valor de 0-100 para 0-1
+                    const volume = this.value / 100;
+                    micMonitorGainNode.gain.value = volume;
+
+                    // Atualizar valor exibido
+                    const volumeValue = document.getElementById('volumeValue');
+                    if (volumeValue) {
+                        volumeValue.textContent = `${this.value}%`;
+                    }
+
+                    // Salvar preferência
+                    localStorage.setItem('micMonitorVolume', volume.toString());
+
+                    console.log(`Volume do monitoramento ajustado para ${this.value}%`);
+                }
+            });
+        }
+    }
+}
+
+// Função para alternar o monitoramento do microfone
+function toggleMicrophoneMonitor() {
+    micMonitorActive = !micMonitorActive;
+
+    // Salvar preferência
+    localStorage.setItem('micMonitorActive', micMonitorActive.toString());
+
+    if (micMonitorActive) {
+        startMicrophoneMonitor();
+    } else {
+        stopMicrophoneMonitor();
+    }
+
+    // Atualizar botão de monitoramento
+    updateMonitorButton();
+
+    return micMonitorActive;
+}
+
+// Função para atualizar o botão de monitoramento
+function updateMonitorButton() {
+    const monitorButton = document.getElementById('webrtcToggleMonitorButton');
+    if (monitorButton) {
+        if (micMonitorActive) {
+            monitorButton.innerHTML = '<i class="fas fa-headphones"></i>';
+            monitorButton.style.backgroundColor = '#4CAF50';
+            monitorButton.title = 'Desativar monitoramento do microfone';
+        } else {
+            monitorButton.innerHTML = '<i class="fas fa-headphones-alt"></i>';
+            monitorButton.style.backgroundColor = '#9e9e9e';
+            monitorButton.title = 'Ativar monitoramento do microfone';
+        }
+    }
+}
+
 // Exportar funções
 window.webrtcCall = {
     initialize: initializeWebRTCCalls,
     startCall: startCall,
     endCall: endCall,
-    isCallActive: () => !!currentCall
+    isCallActive: () => !!currentCall,
+    toggleMicrophoneMonitor: toggleMicrophoneMonitor
 };
 
 // NÃO inicializar automaticamente - apenas exportar as funções

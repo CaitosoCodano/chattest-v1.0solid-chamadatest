@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Chamada de Voz - Chat App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1877f2;
+            --secondary-color: #4CAF50;
+            --danger-color: #ff4d4d;
+            --background-color: #f0f2f5;
+            --card-color: #ffffff;
+            --text-color: #333333;
+            --border-color: #dddfe2;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .back-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .test-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .test-card {
+            background-color: var(--card-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .test-card h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #166fe5;
+        }
+        
+        .btn-success {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #3d8b40;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #e04343;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        
+        .status-indicator i {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        
+        .status-indicator.success {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--secondary-color);
+        }
+        
+        .status-indicator.warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+        
+        .status-indicator.danger {
+            background-color: rgba(255, 77, 77, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .call-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        
+        .user-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .user-avatar i {
+            font-size: 50px;
+            color: #666;
+        }
+        
+        .call-status {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .call-timer {
+            font-family: monospace;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .call-controls {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .call-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .mic-button {
+            background-color: var(--secondary-color);
+        }
+        
+        .mic-button.muted {
+            background-color: #9e9e9e;
+        }
+        
+        .end-button {
+            background-color: var(--danger-color);
+        }
+        
+        .volume-meter {
+            width: 100%;
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        
+        .volume-level {
+            height: 100%;
+            width: 0%;
+            background-color: var(--secondary-color);
+            border-radius: 5px;
+            transition: width 0.1s;
+        }
+        
+        .logs {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 3px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .log-entry.info {
+            color: var(--primary-color);
+        }
+        
+        .log-entry.success {
+            color: var(--secondary-color);
+        }
+        
+        .log-entry.error {
+            color: var(--danger-color);
+        }
+        
+        .log-entry.warning {
+            color: #ffc107;
+        }
+        
+        .test-mode-toggle {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+            color: #856404;
+        }
+        
+        .test-mode-toggle label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .test-mode-toggle input {
+            margin-right: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .test-area {
+                flex-direction: column;
+            }
+            
+            .test-card {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Teste de Chamada de Voz</h1>
+            <button class="back-button" onclick="window.location.href='index.html'">
+                <i class="fas fa-arrow-left"></i> Voltar para o Chat
+            </button>
+        </div>
+        
+        <div class="test-mode-toggle">
+            <label>
+                <input type="checkbox" id="autoTestMode" checked>
+                Modo de teste automático (abre automaticamente ao iniciar o chat)
+            </label>
+        </div>
+        
+        <div class="test-area">
+            <div class="test-card">
+                <h2>Configuração do Teste</h2>
+                
+                <div class="form-group">
+                    <label for="testUser1">Usuário 1:</label>
+                    <input type="text" id="testUser1" class="form-control" value="Usuário de Teste 1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="testUser2">Usuário 2:</label>
+                    <input type="text" id="testUser2" class="form-control" value="Usuário de Teste 2">
+                </div>
+                
+                <div class="btn-group">
+                    <button id="startTestBtn" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Iniciar Teste
+                    </button>
+                    <button id="resetTestBtn" class="btn btn-danger">
+                        <i class="fas fa-redo"></i> Reiniciar
+                    </button>
+                </div>
+                
+                <div class="status-indicator" id="microphoneStatus">
+                    <i class="fas fa-microphone"></i> Verificando microfone...
+                </div>
+                
+                <div class="status-indicator" id="speakerStatus">
+                    <i class="fas fa-volume-up"></i> Verificando alto-falante...
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <h2>Simulação de Chamada</h2>
+                
+                <div class="call-container" id="callContainer" style="display: none;">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="call-status" id="callStatus">Chamando...</div>
+                    <div class="call-timer" id="callTimer">00:00</div>
+                    
+                    <div class="call-controls">
+                        <button class="call-button mic-button" id="toggleMuteBtn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <button class="call-button end-button" id="endCallBtn">
+                            <i class="fas fa-phone-slash"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="volume-meter">
+                        <div class="volume-level" id="volumeLevel"></div>
+                    </div>
+                </div>
+                
+                <div id="incomingCallContainer" style="display: none;">
+                    <div class="status-indicator success">
+                        <i class="fas fa-phone-volume"></i> Chamada recebida de <span id="callerName">Usuário</span>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="acceptCallBtn" class="btn btn-success">
+                            <i class="fas fa-phone"></i> Atender
+                        </button>
+                        <button id="rejectCallBtn" class="btn btn-danger">
+                            <i class="fas fa-phone-slash"></i> Rejeitar
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="callActionContainer">
+                    <div class="btn-group">
+                        <button id="makeCallBtn" class="btn btn-primary">
+                            <i class="fas fa-phone"></i> Fazer Chamada
+                        </button>
+                        <button id="simulateIncomingBtn" class="btn btn-primary">
+                            <i class="fas fa-phone-volume"></i> Simular Chamada Recebida
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-card">
+            <h2>Logs de Teste</h2>
+            <div class="logs" id="testLogs"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Variáveis globais
+        let audioContext = null;
+        let microphone = null;
+        let analyser = null;
+        let volumeDataArray = null;
+        let volumeInterval = null;
+        let callTimerInterval = null;
+        let callDurationSeconds = 0;
+        let isMuted = false;
+        let isCallActive = false;
+        let localStream = null;
+        
+        // Elementos da interface
+        const microphoneStatus = document.getElementById('microphoneStatus');
+        const speakerStatus = document.getElementById('speakerStatus');
+        const callContainer = document.getElementById('callContainer');
+        const incomingCallContainer = document.getElementById('incomingCallContainer');
+        const callActionContainer = document.getElementById('callActionContainer');
+        const callStatus = document.getElementById('callStatus');
+        const callTimer = document.getElementById('callTimer');
+        const volumeLevel = document.getElementById('volumeLevel');
+        const testLogs = document.getElementById('testLogs');
+        const toggleMuteBtn = document.getElementById('toggleMuteBtn');
+        const callerName = document.getElementById('callerName');
+        
+        // Botões
+        document.getElementById('startTestBtn').addEventListener('click', startTest);
+        document.getElementById('resetTestBtn').addEventListener('click', resetTest);
+        document.getElementById('makeCallBtn').addEventListener('click', makeCall);
+        document.getElementById('simulateIncomingBtn').addEventListener('click', simulateIncomingCall);
+        document.getElementById('acceptCallBtn').addEventListener('click', acceptCall);
+        document.getElementById('rejectCallBtn').addEventListener('click', rejectCall);
+        document.getElementById('endCallBtn').addEventListener('click', endCall);
+        document.getElementById('toggleMuteBtn').addEventListener('click', toggleMute);
+        
+        // Verificar modo de teste automático
+        document.getElementById('autoTestMode').addEventListener('change', function() {
+            localStorage.setItem('voiceCallAutoTest', this.checked);
+            logMessage(`Modo de teste automático ${this.checked ? 'ativado' : 'desativado'}`, 'info');
+        });
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar configuração salva
+            const autoTest = localStorage.getItem('voiceCallAutoTest');
+            if (autoTest !== null) {
+                document.getElementById('autoTestMode').checked = autoTest === 'true';
+            }
+            
+            // Verificar microfone e alto-falante
+            checkAudioDevices();
+        });
+        
+        // Função para verificar dispositivos de áudio
+        async function checkAudioDevices() {
+            // Verificar microfone
+            try {
+                logMessage('Verificando acesso ao microfone...', 'info');
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Verificar se o stream tem faixas de áudio
+                if (stream.getAudioTracks().length === 0) {
+                    updateMicrophoneStatus(false, 'Nenhuma faixa de áudio disponível');
+                    logMessage('Nenhuma faixa de áudio disponível no microfone', 'error');
+                } else {
+                    const audioTrack = stream.getAudioTracks()[0];
+                    updateMicrophoneStatus(true, audioTrack.label);
+                    logMessage(`Microfone detectado: ${audioTrack.label}`, 'success');
+                    
+                    // Salvar o stream para uso posterior
+                    localStream = stream;
+                    
+                    // Iniciar medição de volume
+                    startVolumeMeter(stream);
+                }
+                
+                // Verificar alto-falante reproduzindo um som de teste
+                logMessage('Verificando alto-falante...', 'info');
+                const audioElement = new Audio();
+                audioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+                
+                audioElement.onplay = () => {
+                    updateSpeakerStatus(true);
+                    logMessage('Alto-falante funcionando', 'success');
+                };
+                
+                audioElement.onerror = (e) => {
+                    updateSpeakerStatus(false, e.message || 'Erro ao reproduzir áudio');
+                    logMessage(`Erro ao testar alto-falante: ${e.message || 'Erro desconhecido'}`, 'error');
+                };
+                
+                // Tentar reproduzir o som (pode falhar devido a políticas de autoplay)
+                try {
+                    await audioElement.play();
+                } catch (e) {
+                    updateSpeakerStatus(false, 'Reprodução automática bloqueada');
+                    logMessage('Reprodução automática bloqueada pelo navegador. Clique em "Iniciar Teste" para verificar o alto-falante.', 'warning');
+                }
+                
+            } catch (error) {
+                updateMicrophoneStatus(false, error.message || 'Acesso negado');
+                logMessage(`Erro ao acessar o microfone: ${error.message || 'Acesso negado'}`, 'error');
+            }
+        }
+        
+        // Função para iniciar o teste
+        function startTest() {
+            logMessage('Iniciando teste de chamada de voz...', 'info');
+            
+            // Verificar novamente os dispositivos de áudio
+            checkAudioDevices();
+            
+            // Simular uma chamada após 2 segundos
+            setTimeout(() => {
+                if (!isCallActive) {
+                    simulateIncomingCall();
+                }
+            }, 2000);
+        }
+        
+        // Função para reiniciar o teste
+        function resetTest() {
+            logMessage('Reiniciando teste...', 'info');
+            
+            // Encerrar chamada ativa
+            if (isCallActive) {
+                endCall();
+            }
+            
+            // Limpar logs
+            testLogs.innerHTML = '';
+            
+            // Reiniciar verificação de dispositivos
+            checkAudioDevices();
+        }
+        
+        // Função para fazer uma chamada
+        function makeCall() {
+            const user1 = document.getElementById('testUser1').value;
+            const user2 = document.getElementById('testUser2').value;
+            
+            logMessage(`Iniciando chamada de ${user1} para ${user2}...`, 'info');
+            
+            // Mostrar interface de chamada
+            callContainer.style.display = 'flex';
+            incomingCallContainer.style.display = 'none';
+            callActionContainer.style.display = 'none';
+            
+            // Atualizar status
+            callStatus.textContent = 'Chamando...';
+            document.querySelector('.user-avatar').nextElementSibling.textContent = user2;
+            
+            // Simular conexão após 2 segundos
+            setTimeout(() => {
+                callConnected();
+            }, 2000);
+            
+            isCallActive = true;
+        }
+        
+        // Função para simular chamada recebida
+        function simulateIncomingCall() {
+            const user1 = document.getElementById('testUser1').value;
+            const user2 = document.getElementById('testUser2').value;
+            
+            logMessage(`${user1} está recebendo uma chamada de ${user2}...`, 'info');
+            
+            // Mostrar interface de chamada recebida
+            callContainer.style.display = 'none';
+            incomingCallContainer.style.display = 'block';
+            callActionContainer.style.display = 'none';
+            
+            // Atualizar nome do chamador
+            callerName.textContent = user2;
+            
+            // Reproduzir som de chamada (opcional)
+            // playRingtone();
+        }
+        
+        // Função para aceitar chamada
+        function acceptCall() {
+            const user2 = document.getElementById('testUser2').value;
+            
+            logMessage(`Chamada aceita de ${user2}`, 'success');
+            
+            // Mostrar interface de chamada
+            callContainer.style.display = 'flex';
+            incomingCallContainer.style.display = 'none';
+            
+            // Atualizar status
+            callStatus.textContent = 'Conectando...';
+            document.querySelector('.user-avatar').nextElementSibling.textContent = user2;
+            
+            // Simular conexão após 1 segundo
+            setTimeout(() => {
+                callConnected();
+            }, 1000);
+            
+            isCallActive = true;
+        }
+        
+        // Função para rejeitar chamada
+        function rejectCall() {
+            const user2 = document.getElementById('testUser2').value;
+            
+            logMessage(`Chamada rejeitada de ${user2}`, 'warning');
+            
+            // Mostrar interface de ação
+            callContainer.style.display = 'none';
+            incomingCallContainer.style.display = 'none';
+            callActionContainer.style.display = 'block';
+        }
+        
+        // Função para chamada conectada
+        function callConnected() {
+            logMessage('Chamada conectada!', 'success');
+            
+            // Atualizar status
+            callStatus.textContent = 'Conectado';
+            
+            // Iniciar temporizador
+            startCallTimer();
+        }
+        
+        // Função para encerrar chamada
+        function endCall() {
+            const user2 = document.getElementById('testUser2').value;
+            
+            logMessage(`Chamada encerrada com ${user2}`, 'info');
+            
+            // Parar temporizador
+            stopCallTimer();
+            
+            // Mostrar interface de ação
+            callContainer.style.display = 'none';
+            incomingCallContainer.style.display = 'none';
+            callActionContainer.style.display = 'block';
+            
+            isCallActive = false;
+        }
+        
+        // Função para alternar mudo
+        function toggleMute() {
+            isMuted = !isMuted;
+            
+            // Atualizar botão
+            if (isMuted) {
+                toggleMuteBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                toggleMuteBtn.classList.add('muted');
+                logMessage('Microfone silenciado', 'warning');
+            } else {
+                toggleMuteBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                toggleMuteBtn.classList.remove('muted');
+                logMessage('Microfone ativado', 'success');
+            }
+            
+            // Silenciar faixas de áudio
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => {
+                    track.enabled = !isMuted;
+                });
+            }
+        }
+        
+        // Função para iniciar medição de volume
+        function startVolumeMeter(stream) {
+            try {
+                // Criar contexto de áudio
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Criar fonte de mídia
+                microphone = audioContext.createMediaStreamSource(stream);
+                
+                // Criar analisador
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                
+                // Conectar microfone ao analisador
+                microphone.connect(analyser);
+                
+                // Criar array para dados de volume
+                volumeDataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                // Atualizar medidor de volume periodicamente
+                volumeInterval = setInterval(updateVolumeMeter, 100);
+                
+                logMessage('Medidor de volume iniciado', 'info');
+            } catch (error) {
+                logMessage(`Erro ao iniciar medidor de volume: ${error.message}`, 'error');
+            }
+        }
+        
+        // Função para atualizar medidor de volume
+        function updateVolumeMeter() {
+            if (!analyser || isMuted) {
+                volumeLevel.style.width = '0%';
+                return;
+            }
+            
+            // Obter dados de frequência
+            analyser.getByteFrequencyData(volumeDataArray);
+            
+            // Calcular volume médio
+            let sum = 0;
+            for (let i = 0; i < volumeDataArray.length; i++) {
+                sum += volumeDataArray[i];
+            }
+            const average = sum / volumeDataArray.length;
+            
+            // Converter para porcentagem (0-100)
+            const volume = Math.min(100, Math.max(0, average * 100 / 256));
+            
+            // Atualizar medidor de volume
+            volumeLevel.style.width = `${volume}%`;
+            
+            // Mudar cor com base no volume
+            if (volume > 75) {
+                volumeLevel.style.backgroundColor = '#ff5722';
+            } else if (volume > 50) {
+                volumeLevel.style.backgroundColor = '#ff9800';
+            } else {
+                volumeLevel.style.backgroundColor = '#4CAF50';
+            }
+        }
+        
+        // Função para iniciar temporizador de chamada
+        function startCallTimer() {
+            callDurationSeconds = 0;
+            updateCallTimerDisplay();
+            
+            callTimerInterval = setInterval(() => {
+                callDurationSeconds++;
+                updateCallTimerDisplay();
+            }, 1000);
+        }
+        
+        // Função para parar temporizador de chamada
+        function stopCallTimer() {
+            if (callTimerInterval) {
+                clearInterval(callTimerInterval);
+                callTimerInterval = null;
+            }
+        }
+        
+        // Função para atualizar exibição do temporizador
+        function updateCallTimerDisplay() {
+            const minutes = Math.floor(callDurationSeconds / 60).toString().padStart(2, '0');
+            const seconds = (callDurationSeconds % 60).toString().padStart(2, '0');
+            callTimer.textContent = `${minutes}:${seconds}`;
+        }
+        
+        // Função para atualizar status do microfone
+        function updateMicrophoneStatus(isActive, message = null) {
+            if (isActive) {
+                microphoneStatus.className = 'status-indicator success';
+                microphoneStatus.innerHTML = `<i class="fas fa-microphone"></i> Microfone ativo${message ? ': ' + message : ''}`;
+            } else {
+                microphoneStatus.className = 'status-indicator danger';
+                microphoneStatus.innerHTML = `<i class="fas fa-microphone-slash"></i> Microfone inativo${message ? ': ' + message : ''}`;
+            }
+        }
+        
+        // Função para atualizar status do alto-falante
+        function updateSpeakerStatus(isActive, message = null) {
+            if (isActive) {
+                speakerStatus.className = 'status-indicator success';
+                speakerStatus.innerHTML = `<i class="fas fa-volume-up"></i> Alto-falante ativo${message ? ': ' + message : ''}`;
+            } else {
+                speakerStatus.className = 'status-indicator danger';
+                speakerStatus.innerHTML = `<i class="fas fa-volume-mute"></i> Alto-falante inativo${message ? ': ' + message : ''}`;
+            }
+        }
+        
+        // Função para adicionar mensagem de log
+        function logMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            testLogs.appendChild(logEntry);
+            testLogs.scrollTop = testLogs.scrollHeight;
+        }
+        
+        // Exportar funções para uso global
+        window.voiceCallTest = {
+            startTest,
+            resetTest,
+            makeCall,
+            simulateIncomingCall,
+            acceptCall,
+            rejectCall,
+            endCall,
+            toggleMute
+        };
+    </script>
+</body>
+</html>

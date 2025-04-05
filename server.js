@@ -15,6 +15,7 @@ const setupTypingEvents = require('./typing-events');
 const registerSocketEvents = require('./socket-events');
 const registerWebRTCEvents = require('./webrtc-signaling');
 const registerSimpleWebRTCEvents = require('./simple-webrtc-signaling');
+const registerWebRTCSignalingServer = require('./webrtc-signaling-server');
 
 // Inicialização do Express e Socket.IO
 const app = express();
@@ -57,6 +58,7 @@ io.on('connection', (socket) => {
     // Configurar eventos de WebRTC para chamadas de voz
     // registerWebRTCEvents(io, socket, connectedUsers); // Implementação original
     registerSimpleWebRTCEvents(io, socket, connectedUsers); // Implementação simplificada
+    registerWebRTCSignalingServer(io, socket, connectedUsers); // Implementação com microfone real
     console.log('Novo usuário conectado:', socket.id);
 
     socket.on('authenticate', async ({ token }) => {

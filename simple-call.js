@@ -106,6 +106,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         console.log(`Iniciando chamada para ${window.currentChatUser.username}`);
 
+        // Verificar se o sistema de chamadas WebRTC está disponível
+        if (window.webrtcCall) {
+            console.log('Usando sistema de chamadas WebRTC com microfone real');
+            window.webrtcCall.startCall(window.currentChatUser._id, window.currentChatUser.username);
+            return;
+        }
+
+        console.log('Usando sistema de chamadas simulado');
+
         // Remover qualquer interface de chamada existente
         const existingCallUIs = document.querySelectorAll('[id^="callUI"]');
         existingCallUIs.forEach(ui => {
@@ -243,6 +252,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Função para encerrar chamada
     function endCall() {
+        // Verificar se o sistema de chamadas WebRTC está disponível e em uso
+        if (window.webrtcCall && window.webrtcCall.isCallActive && window.webrtcCall.isCallActive()) {
+            console.log('Encerrando chamada WebRTC com microfone real');
+            window.webrtcCall.endCall();
+            return;
+        }
+
+        console.log('Encerrando chamada simulada');
+
         // Ocultar interface de chamada
         callUI.style.display = 'none';
 

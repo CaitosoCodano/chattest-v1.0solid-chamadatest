@@ -112,9 +112,19 @@ function setupCallUI() {
             <h3 id="webrtcCallUsername" style="margin: 10px 0;">Usuário</h3>
             <p id="webrtcCallStatus" style="margin: 5px 0; color: #666;">Chamando...</p>
             <div id="webrtcCallTimer" style="font-family: monospace; font-size: 18px; margin: 10px 0;">00:00</div>
+
+            <!-- Indicadores de status de áudio -->
+            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 5px;">
+                <div id="micStatus" style="display: flex; align-items: center; font-size: 12px; color: #4CAF50;">
+                    <i class="fas fa-microphone" style="margin-right: 5px;"></i> Microfone ativo
+                </div>
+                <div id="speakerStatus" style="display: flex; align-items: center; font-size: 12px; color: #4CAF50;">
+                    <i class="fas fa-volume-up" style="margin-right: 5px;"></i> Alto-falante ativo
+                </div>
+            </div>
         </div>
         <div style="display: flex; gap: 20px;">
-            <button id="webrtcToggleMuteButton" style="width: 50px; height: 50px; border-radius: 50%; border: none; background-color: #f0f0f0; cursor: pointer;">
+            <button id="webrtcToggleMuteButton" style="width: 50px; height: 50px; border-radius: 50%; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
                 <i class="fas fa-microphone"></i>
             </button>
             <button id="webrtcEndCallButton" style="width: 50px; height: 50px; border-radius: 50%; border: none; background-color: #ff4d4d; color: white; cursor: pointer;">
@@ -122,6 +132,11 @@ function setupCallUI() {
             </button>
         </div>
         <div id="webrtcCallAudioContainer"></div>
+
+        <!-- Mensagem de ajuda -->
+        <div style="margin-top: 15px; font-size: 12px; color: #666; text-align: center;">
+            Se não ouvir o outro usuário, verifique se o volume do seu dispositivo está ligado.
+        </div>
     `;
 
     // Criar interface de chamada recebida
@@ -297,9 +312,16 @@ function initializePeerConnection() {
     const configuration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' }
             // Em um ambiente de produção, você deve adicionar servidores TURN
-        ]
+        ],
+        iceCandidatePoolSize: 10,
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require',
+        sdpSemantics: 'unified-plan'
     };
 
     // Criar conexão peer
@@ -344,14 +366,68 @@ function initializePeerConnection() {
             // Remover qualquer áudio existente
             audioContainer.innerHTML = '';
 
-            // Criar elemento de áudio
+            // Criar elemento de áudio com controles e configurações avançadas
             const audioElement = document.createElement('audio');
+            audioElement.id = 'remoteAudio';
             audioElement.autoplay = true;
+            audioElement.playsInline = true; // Importante para iOS
+            audioElement.controls = false; // Sem controles visuais, mas podemos habilitar para debug
+            audioElement.volume = 1.0; // Volume máximo
             audioElement.srcObject = remoteStream;
 
+            // Configurações adicionais para garantir a reprodução
+            audioElement.setAttribute('playsinline', ''); // Redundante, mas importante para iOS
+            audioElement.muted = false;
+
+            // Adicionar evento para verificar se o áudio está sendo reproduzido
+            audioElement.onplay = () => {
+                console.log('Áudio remoto está sendo reproduzido');
+
+                // Atualizar status do alto-falante
+                updateSpeakerStatus(true);
+            };
+
+            audioElement.onerror = (e) => {
+                console.error('Erro ao reproduzir áudio remoto:', e);
+
+                // Atualizar status do alto-falante
+                updateSpeakerStatus(false, e.message);
+            };
+
+            // Verificar se o áudio está sendo reproduzido periodicamente
+            setInterval(() => {
+                if (audioElement.paused) {
+                    console.warn('Áudio remoto está pausado, tentando reproduzir novamente');
+                    audioElement.play().catch(e => {
+                        console.error('Erro ao retomar reprodução de áudio:', e);
+                    });
+                    updateSpeakerStatus(false, 'Pausado');
+                } else {
+                    updateSpeakerStatus(true);
+                }
+            }, 5000);
+
+            // Adicionar ao container
             audioContainer.appendChild(audioElement);
+
+            // Forçar a reprodução (importante para alguns navegadores)
+            audioElement.play().catch(e => {
+                console.error('Erro ao iniciar reprodução de áudio:', e);
+                // Atualizar status do alto-falante
+                updateSpeakerStatus(false, 'Erro de reprodução');
+
+                // Tentar novamente com interação do usuário
+                alert('Clique em OK para ativar o áudio da chamada');
+                audioElement.play().catch(e2 => {
+                    console.error('Falha na segunda tentativa de reprodução de áudio:', e2);
+                    updateSpeakerStatus(false, 'Falha na reprodução');
+                });
+            });
         }
     };
+
+    // Atualizar status do microfone
+    updateMicrophoneStatus(true);
 }
 
 // Criar e enviar oferta SDP
@@ -721,14 +797,170 @@ function toggleMute() {
         muteButton.innerHTML = isMuted ?
             '<i class="fas fa-microphone-slash"></i>' :
             '<i class="fas fa-microphone"></i>';
+
+        // Adicionar feedback visual
+        if (isMuted) {
+            muteButton.style.backgroundColor = '#ff4d4d';
+            muteButton.style.color = 'white';
+        } else {
+            muteButton.style.backgroundColor = '#4CAF50';
+            muteButton.style.color = 'white';
+        }
     }
 
     // Ativar/desativar faixas de áudio
     localStream.getAudioTracks().forEach(track => {
         track.enabled = !isMuted;
+        console.log(`Faixa de áudio ${track.label} ${track.enabled ? 'ativada' : 'desativada'}`);
     });
 
+    // Adicionar feedback visual na interface de chamada
+    const callStatus = document.getElementById('webrtcCallStatus');
+    if (callStatus) {
+        if (isMuted) {
+            callStatus.innerHTML = 'Conectado <span style="color: #ff4d4d;">(Mudo)</span>';
+        } else {
+            callStatus.textContent = 'Conectado';
+        }
+    }
+
+    // Atualizar status do microfone
+    if (window.updateMicrophoneStatus) {
+        window.updateMicrophoneStatus(!isMuted);
+    }
+
+    // Notificar o usuário
     console.log('Microfone ' + (isMuted ? 'desativado' : 'ativado'));
+
+    // Criar um indicador visual de volume (opcional)
+    if (!isMuted && localStream) {
+        startVolumeMetering();
+    } else {
+        stopVolumeMetering();
+    }
+}
+
+// Variáveis para medição de volume
+let audioContext = null;
+let mediaStreamSource = null;
+let analyser = null;
+let volumeMeterInterval = null;
+
+// Iniciar medição de volume
+function startVolumeMetering() {
+    // Parar qualquer medição existente
+    stopVolumeMetering();
+
+    try {
+        // Criar contexto de áudio
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Criar fonte de stream
+        mediaStreamSource = audioContext.createMediaStreamSource(localStream);
+
+        // Criar analisador
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        mediaStreamSource.connect(analyser);
+
+        // Criar buffer para dados
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        // Criar ou obter elemento para indicador de volume
+        let volumeIndicator = document.getElementById('volumeIndicator');
+        if (!volumeIndicator) {
+            volumeIndicator = document.createElement('div');
+            volumeIndicator.id = 'volumeIndicator';
+            volumeIndicator.style.position = 'absolute';
+            volumeIndicator.style.bottom = '10px';
+            volumeIndicator.style.left = '50%';
+            volumeIndicator.style.transform = 'translateX(-50%)';
+            volumeIndicator.style.width = '80%';
+            volumeIndicator.style.height = '5px';
+            volumeIndicator.style.backgroundColor = '#ddd';
+            volumeIndicator.style.borderRadius = '2px';
+
+            const volumeLevel = document.createElement('div');
+            volumeLevel.id = 'volumeLevel';
+            volumeLevel.style.width = '0%';
+            volumeLevel.style.height = '100%';
+            volumeLevel.style.backgroundColor = '#4CAF50';
+            volumeLevel.style.borderRadius = '2px';
+            volumeLevel.style.transition = 'width 0.1s';
+
+            volumeIndicator.appendChild(volumeLevel);
+
+            // Adicionar ao container de chamada
+            const callUI = document.getElementById('webrtcCallUI');
+            if (callUI) {
+                callUI.style.position = 'relative';
+                callUI.appendChild(volumeIndicator);
+            }
+        }
+
+        // Atualizar indicador de volume periodicamente
+        volumeMeterInterval = setInterval(() => {
+            // Obter dados de volume
+            analyser.getByteFrequencyData(dataArray);
+
+            // Calcular volume médio
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / bufferLength;
+
+            // Normalizar para porcentagem (0-100)
+            const volume = Math.min(100, Math.max(0, average * 100 / 256));
+
+            // Atualizar indicador visual
+            const volumeLevel = document.getElementById('volumeLevel');
+            if (volumeLevel) {
+                volumeLevel.style.width = `${volume}%`;
+
+                // Mudar cor com base no volume
+                if (volume > 50) {
+                    volumeLevel.style.backgroundColor = '#ff9800';
+                } else if (volume > 75) {
+                    volumeLevel.style.backgroundColor = '#ff5722';
+                } else {
+                    volumeLevel.style.backgroundColor = '#4CAF50';
+                }
+            }
+        }, 100);
+
+    } catch (error) {
+        console.error('Erro ao iniciar medição de volume:', error);
+    }
+}
+
+// Parar medição de volume
+function stopVolumeMetering() {
+    if (volumeMeterInterval) {
+        clearInterval(volumeMeterInterval);
+        volumeMeterInterval = null;
+    }
+
+    if (mediaStreamSource) {
+        mediaStreamSource.disconnect();
+        mediaStreamSource = null;
+    }
+
+    if (audioContext) {
+        if (audioContext.state !== 'closed') {
+            audioContext.close().catch(e => console.error('Erro ao fechar contexto de áudio:', e));
+        }
+        audioContext = null;
+    }
+
+    analyser = null;
+
+    // Ocultar indicador de volume
+    const volumeIndicator = document.getElementById('volumeIndicator');
+    if (volumeIndicator) {
+        volumeIndicator.style.display = 'none';
+    }
 }
 
 // Mostrar interface de chamada

@@ -1,0 +1,295 @@
+/**
+ * Estilos específicos para dispositivos móveis
+ */
+
+/* Estilos gerais para mobile */
+.mobile-view {
+    --sidebar-width: 100%;
+    --chat-width: 100%;
+    --header-height: 60px;
+    --footer-height: 60px;
+}
+
+/* Container principal em modo mobile */
+.mobile-view .container {
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sidebar em modo mobile */
+.mobile-view .sidebar {
+    width: 100%;
+    height: calc(100vh - var(--header-height));
+    position: absolute;
+    top: var(--header-height);
+    left: 0;
+    z-index: 100;
+    transition: transform 0.3s ease;
+}
+
+/* Sidebar oculta quando o chat está ativo */
+.mobile-view.chat-active .sidebar {
+    transform: translateX(-100%);
+}
+
+/* Chat em modo mobile */
+.mobile-view .chat-container {
+    width: 100%;
+    height: calc(100vh - var(--header-height) - var(--footer-height));
+    position: absolute;
+    top: var(--header-height);
+    left: 0;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 90;
+}
+
+/* Chat visível quando ativo */
+.mobile-view.chat-active .chat-container {
+    transform: translateX(0);
+}
+
+/* Cabeçalho em modo mobile */
+.mobile-view .chat-header {
+    padding: 0 10px;
+    height: var(--header-height);
+}
+
+/* Botão de voltar para a lista de contatos */
+.mobile-view .back-to-contacts {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    color: #1877f2;
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+/* Área de mensagens em modo mobile */
+.mobile-view .messages-container {
+    height: calc(100vh - var(--header-height) - var(--footer-height) - 60px);
+}
+
+/* Área de entrada de mensagem em modo mobile */
+.mobile-view .message-input-container {
+    padding: 10px;
+    height: var(--footer-height);
+}
+
+.mobile-view .message-input {
+    width: calc(100% - 50px);
+}
+
+/* Ajustes para o botão de chamada em mobile */
+.mobile-view .call-button-container {
+    right: 60px;
+}
+
+/* Ajustes para o menu de três pontinhos em mobile */
+.mobile-view .chat-menu {
+    right: 10px;
+}
+
+/* Interface de chamada em modo mobile */
+.mobile-view #webrtcCallUI {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    transform: none;
+}
+
+/* Botões de chamada em modo mobile */
+.mobile-view .call-controls {
+    gap: 30px;
+}
+
+.mobile-view #webrtcToggleMuteButton,
+.mobile-view #webrtcToggleMonitorButton,
+.mobile-view #webrtcEndCallButton {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+}
+
+/* Ajustes para a lista de contatos em mobile */
+.mobile-view .contact-list {
+    height: calc(100vh - var(--header-height) - 50px);
+}
+
+.mobile-view .contact-item {
+    padding: 15px;
+}
+
+/* Ajustes para o modo escuro em mobile */
+.mobile-view.dark-mode .back-to-contacts {
+    color: #4CAF50;
+}
+
+/* Barra de navegação inferior para mobile */
+.mobile-view .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--footer-height);
+    background-color: #fff;
+    border-top: 1px solid #ddd;
+    z-index: 110;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.mobile-view.dark-mode .mobile-nav {
+    background-color: #333;
+    border-top-color: #444;
+}
+
+.mobile-view .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 25%;
+    height: 100%;
+    color: #666;
+    text-decoration: none;
+    font-size: 12px;
+}
+
+.mobile-view .nav-item i {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.mobile-view .nav-item.active {
+    color: #1877f2;
+}
+
+.mobile-view.dark-mode .nav-item {
+    color: #aaa;
+}
+
+.mobile-view.dark-mode .nav-item.active {
+    color: #4CAF50;
+}
+
+/* Ajustes para notificações em mobile */
+.mobile-view .notification {
+    width: 90%;
+    left: 5%;
+    bottom: calc(var(--footer-height) + 10px);
+}
+
+/* Ajustes para o botão de tema em mobile */
+.mobile-view .theme-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+/* Ajustes para a tela de login em mobile */
+.mobile-view .login-container,
+.mobile-view .register-container {
+    width: 90%;
+    padding: 20px;
+}
+
+.mobile-view .login-form input,
+.mobile-view .register-form input {
+    padding: 12px;
+    font-size: 16px;
+}
+
+.mobile-view .login-form button,
+.mobile-view .register-form button {
+    padding: 12px;
+    font-size: 16px;
+}
+
+/* Ajustes para o menu de chamada em grupo em mobile */
+.mobile-view .contact-selector-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    transform: none;
+}
+
+/* Ajustes para o ambiente de teste em mobile */
+.mobile-view .test-area {
+    flex-direction: column;
+}
+
+.mobile-view .test-card {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+/* Media queries para diferentes tamanhos de tela */
+@media (max-width: 480px) {
+    .mobile-view {
+        --header-height: 50px;
+        --footer-height: 50px;
+    }
+    
+    .mobile-view .chat-header h2 {
+        font-size: 16px;
+    }
+    
+    .mobile-view .back-to-contacts {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+    
+    .mobile-view .message-input-container {
+        padding: 5px;
+    }
+}
+
+/* Ajustes para tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+    .mobile-view {
+        --header-height: 60px;
+        --footer-height: 60px;
+    }
+    
+    .mobile-view .chat-header h2 {
+        font-size: 18px;
+    }
+}
+
+/* Ajustes para orientação paisagem em dispositivos móveis */
+@media (max-height: 500px) and (orientation: landscape) {
+    .mobile-view {
+        --header-height: 40px;
+        --footer-height: 40px;
+    }
+    
+    .mobile-view .messages-container {
+        height: calc(100vh - var(--header-height) - var(--footer-height) - 40px);
+    }
+    
+    .mobile-view .mobile-nav {
+        height: var(--footer-height);
+    }
+    
+    .mobile-view .nav-item i {
+        font-size: 16px;
+        margin-bottom: 2px;
+    }
+    
+    .mobile-view .nav-item {
+        font-size: 10px;
+    }
+}

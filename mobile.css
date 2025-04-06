@@ -1,295 +1,634 @@
 /**
- * Estilos específicos para dispositivos móveis
+ * Estilos otimizados para dispositivos móveis
+ * Versão 2.0 - Redesenhado para uma experiência verdadeiramente mobile
  */
+
+/* Variáveis e configurações globais para mobile */
+:root {
+    --mobile-primary-color: #1877f2;
+    --mobile-secondary-color: #4CAF50;
+    --mobile-danger-color: #ff4d4d;
+    --mobile-background-color: #f0f2f5;
+    --mobile-card-color: #ffffff;
+    --mobile-text-color: #333333;
+    --mobile-border-color: #dddfe2;
+    --mobile-header-height: 56px;
+    --mobile-footer-height: 56px;
+    --mobile-transition-speed: 0.3s;
+    --mobile-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
 /* Estilos gerais para mobile */
 .mobile-view {
-    --sidebar-width: 100%;
-    --chat-width: 100%;
-    --header-height: 60px;
-    --footer-height: 60px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent; /* Remove highlight ao tocar em elementos */
+    touch-action: manipulation; /* Otimização para toque */
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+/* Redefinições básicas para mobile */
+.mobile-view * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-view button {
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
 /* Container principal em modo mobile */
 .mobile-view .container {
+    display: flex;
     flex-direction: column;
     height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: var(--mobile-background-color);
+    position: relative;
+}
+
+/* ===== LAYOUT PRINCIPAL ===== */
+
+/* Estrutura de páginas */
+.mobile-view .page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--mobile-transition-speed) ease;
+    background-color: var(--mobile-background-color);
+    z-index: 10;
     overflow: hidden;
 }
 
-/* Sidebar em modo mobile */
-.mobile-view .sidebar {
-    width: 100%;
-    height: calc(100vh - var(--header-height));
-    position: absolute;
-    top: var(--header-height);
-    left: 0;
-    z-index: 100;
-    transition: transform 0.3s ease;
-}
-
-/* Sidebar oculta quando o chat está ativo */
-.mobile-view.chat-active .sidebar {
-    transform: translateX(-100%);
-}
-
-/* Chat em modo mobile */
-.mobile-view .chat-container {
-    width: 100%;
-    height: calc(100vh - var(--header-height) - var(--footer-height));
-    position: absolute;
-    top: var(--header-height);
-    left: 0;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    z-index: 90;
-}
-
-/* Chat visível quando ativo */
-.mobile-view.chat-active .chat-container {
+/* Página de contatos (principal) */
+.mobile-view .contacts-page {
+    z-index: 20;
     transform: translateX(0);
 }
 
-/* Cabeçalho em modo mobile */
-.mobile-view .chat-header {
-    padding: 0 10px;
-    height: var(--header-height);
+.mobile-view.chat-active .contacts-page {
+    transform: translateX(-100%);
 }
 
-/* Botão de voltar para a lista de contatos */
-.mobile-view .back-to-contacts {
+/* Página de chat */
+.mobile-view .chat-page {
+    z-index: 10;
+    transform: translateX(100%);
+}
+
+.mobile-view.chat-active .chat-page {
+    transform: translateX(0);
+}
+
+/* ===== CABEÇALHO ===== */
+
+/* Cabeçalho comum */
+.mobile-view .mobile-header {
+    height: var(--mobile-header-height);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background-color: var(--mobile-card-color);
+    box-shadow: var(--mobile-shadow);
+    position: relative;
+    z-index: 30;
+}
+
+.mobile-view .mobile-header-title {
+    font-size: 18px;
+    font-weight: 600;
+    flex: 1;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-view .mobile-header-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
     background: none;
     border: none;
-    color: #1877f2;
+    color: var(--mobile-primary-color);
     font-size: 20px;
-    cursor: pointer;
-    margin-right: 10px;
+    margin: 0 4px;
 }
 
-/* Área de mensagens em modo mobile */
-.mobile-view .messages-container {
-    height: calc(100vh - var(--header-height) - var(--footer-height) - 60px);
+.mobile-view .mobile-header-button:active {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
-/* Área de entrada de mensagem em modo mobile */
-.mobile-view .message-input-container {
-    padding: 10px;
-    height: var(--footer-height);
+.mobile-view .mobile-back-button {
+    margin-right: 8px;
 }
 
-.mobile-view .message-input {
-    width: calc(100% - 50px);
-}
+/* ===== LISTA DE CONTATOS ===== */
 
-/* Ajustes para o botão de chamada em mobile */
-.mobile-view .call-button-container {
-    right: 60px;
-}
-
-/* Ajustes para o menu de três pontinhos em mobile */
-.mobile-view .chat-menu {
-    right: 10px;
-}
-
-/* Interface de chamada em modo mobile */
-.mobile-view #webrtcCallUI {
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-    top: 0;
-    left: 0;
-    transform: none;
-}
-
-/* Botões de chamada em modo mobile */
-.mobile-view .call-controls {
-    gap: 30px;
-}
-
-.mobile-view #webrtcToggleMuteButton,
-.mobile-view #webrtcToggleMonitorButton,
-.mobile-view #webrtcEndCallButton {
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
-}
-
-/* Ajustes para a lista de contatos em mobile */
-.mobile-view .contact-list {
-    height: calc(100vh - var(--header-height) - 50px);
+.mobile-view .contacts-container {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Rolagem suave em iOS */
+    padding: 8px 0;
+    background-color: var(--mobile-background-color);
 }
 
 .mobile-view .contact-item {
-    padding: 15px;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mobile-border-color);
+    background-color: var(--mobile-card-color);
+    position: relative;
+    transition: background-color 0.2s;
 }
 
-/* Ajustes para o modo escuro em mobile */
-.mobile-view.dark-mode .back-to-contacts {
-    color: #4CAF50;
+.mobile-view .contact-item:active {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
-/* Barra de navegação inferior para mobile */
+.mobile-view .contact-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #e1e1e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.mobile-view .contact-avatar i {
+    font-size: 24px;
+    color: #888;
+}
+
+.mobile-view .contact-info {
+    flex: 1;
+    min-width: 0; /* Permite que o texto seja truncado */
+}
+
+.mobile-view .contact-name {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-view .contact-status {
+    font-size: 14px;
+    color: #65676b;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-view .contact-status.online {
+    color: var(--mobile-secondary-color);
+}
+
+.mobile-view .contact-badge {
+    background-color: var(--mobile-primary-color);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    margin-left: 8px;
+}
+
+/* ===== CHAT ===== */
+
+.mobile-view .chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--mobile-background-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.mobile-view .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-view .message {
+    max-width: 80%;
+    padding: 8px 12px;
+    border-radius: 18px;
+    margin-bottom: 8px;
+    position: relative;
+    word-wrap: break-word;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.mobile-view .message.sent {
+    align-self: flex-end;
+    background-color: var(--mobile-primary-color);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.mobile-view .message.received {
+    align-self: flex-start;
+    background-color: var(--mobile-card-color);
+    color: var(--mobile-text-color);
+    border-bottom-left-radius: 4px;
+    box-shadow: var(--mobile-shadow);
+}
+
+.mobile-view .message-time {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 4px;
+    text-align: right;
+}
+
+.mobile-view .message-input-container {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--mobile-card-color);
+    border-top: 1px solid var(--mobile-border-color);
+    position: relative;
+    z-index: 20;
+}
+
+.mobile-view .message-input {
+    flex: 1;
+    border: 1px solid var(--mobile-border-color);
+    border-radius: 20px;
+    padding: 8px 12px;
+    font-size: 15px;
+    background-color: var(--mobile-background-color);
+    outline: none;
+    margin-right: 8px;
+    min-height: 40px;
+    max-height: 100px;
+    resize: none;
+}
+
+.mobile-view .send-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--mobile-primary-color);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.mobile-view .send-button:active {
+    opacity: 0.9;
+}
+
+/* ===== BARRA DE NAVEGAÇÃO ===== */
+
 .mobile-view .mobile-nav {
     display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: var(--footer-height);
-    background-color: #fff;
-    border-top: 1px solid #ddd;
-    z-index: 110;
-    justify-content: space-around;
-    align-items: center;
-}
-
-.mobile-view.dark-mode .mobile-nav {
-    background-color: #333;
-    border-top-color: #444;
+    height: var(--mobile-footer-height);
+    background-color: var(--mobile-card-color);
+    border-top: 1px solid var(--mobile-border-color);
+    position: relative;
+    z-index: 30;
 }
 
 .mobile-view .nav-item {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 25%;
-    height: 100%;
-    color: #666;
+    padding: 4px 0;
+    color: #65676b;
     text-decoration: none;
     font-size: 12px;
+    position: relative;
 }
 
 .mobile-view .nav-item i {
-    font-size: 20px;
+    font-size: 22px;
     margin-bottom: 4px;
 }
 
 .mobile-view .nav-item.active {
-    color: #1877f2;
+    color: var(--mobile-primary-color);
 }
 
-.mobile-view.dark-mode .nav-item {
-    color: #aaa;
-}
-
-.mobile-view.dark-mode .nav-item.active {
-    color: #4CAF50;
-}
-
-/* Ajustes para notificações em mobile */
-.mobile-view .notification {
-    width: 90%;
-    left: 5%;
-    bottom: calc(var(--footer-height) + 10px);
-}
-
-/* Ajustes para o botão de tema em mobile */
-.mobile-view .theme-toggle {
+.mobile-view .nav-item .nav-badge {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 4px;
+    right: calc(50% - 18px);
+    background-color: var(--mobile-danger-color);
+    color: white;
+    font-size: 11px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
 }
 
-/* Ajustes para a tela de login em mobile */
-.mobile-view .login-container,
-.mobile-view .register-container {
-    width: 90%;
-    padding: 20px;
-}
+/* ===== CHAMADAS ===== */
 
-.mobile-view .login-form input,
-.mobile-view .register-form input {
-    padding: 12px;
-    font-size: 16px;
-}
-
-.mobile-view .login-form button,
-.mobile-view .register-form button {
-    padding: 12px;
-    font-size: 16px;
-}
-
-/* Ajustes para o menu de chamada em grupo em mobile */
-.mobile-view .contact-selector-container {
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
+.mobile-view .call-interface {
+    position: fixed;
     top: 0;
     left: 0;
-    transform: none;
-}
-
-/* Ajustes para o ambiente de teste em mobile */
-.mobile-view .test-area {
-    flex-direction: column;
-}
-
-.mobile-view .test-card {
     width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 60px 20px 40px;
+    color: white;
+}
+
+.mobile-view .call-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.mobile-view .call-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.mobile-view .call-avatar i {
+    font-size: 50px;
+    color: #ddd;
+}
+
+.mobile-view .call-username {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.mobile-view .call-status {
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.mobile-view .call-timer {
+    font-size: 20px;
+    font-family: monospace;
+    margin: 16px 0;
+}
+
+.mobile-view .call-controls {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
     margin-bottom: 20px;
 }
 
-/* Media queries para diferentes tamanhos de tela */
-@media (max-width: 480px) {
-    .mobile-view {
-        --header-height: 50px;
-        --footer-height: 50px;
-    }
-    
-    .mobile-view .chat-header h2 {
+.mobile-view .call-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+}
+
+.mobile-view .call-button.mute {
+    background-color: #555;
+}
+
+.mobile-view .call-button.mute.active {
+    background-color: var(--mobile-danger-color);
+}
+
+.mobile-view .call-button.end {
+    background-color: var(--mobile-danger-color);
+}
+
+.mobile-view .call-button.monitor {
+    background-color: #555;
+}
+
+.mobile-view .call-button.monitor.active {
+    background-color: var(--mobile-secondary-color);
+}
+
+/* ===== NOTIFICAÇÕES ===== */
+
+.mobile-view .notification {
+    position: fixed;
+    bottom: calc(var(--mobile-footer-height) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
+    background-color: var(--mobile-card-color);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translate(-50%, 100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.mobile-view .notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--mobile-primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.mobile-view .notification-content {
+    flex: 1;
+}
+
+.mobile-view .notification-title {
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+.mobile-view .notification-message {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.mobile-view .notification-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 18px;
+    padding: 4px;
+    margin-left: 8px;
+}
+
+/* ===== MODO ESCURO ===== */
+
+.mobile-view.dark-mode {
+    --mobile-background-color: #121212;
+    --mobile-card-color: #1e1e1e;
+    --mobile-text-color: #e4e6eb;
+    --mobile-border-color: #3a3b3c;
+    --mobile-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    color: var(--mobile-text-color);
+}
+
+.mobile-view.dark-mode .mobile-header {
+    background-color: #242526;
+}
+
+.mobile-view.dark-mode .mobile-nav {
+    background-color: #242526;
+}
+
+.mobile-view.dark-mode .contact-item {
+    background-color: var(--mobile-card-color);
+}
+
+.mobile-view.dark-mode .contact-status {
+    color: #b0b3b8;
+}
+
+.mobile-view.dark-mode .message.received {
+    background-color: #3a3b3c;
+    color: #e4e6eb;
+}
+
+.mobile-view.dark-mode .message-input {
+    background-color: #3a3b3c;
+    color: #e4e6eb;
+    border-color: #4a4b4c;
+}
+
+.mobile-view.dark-mode .nav-item {
+    color: #b0b3b8;
+}
+
+.mobile-view.dark-mode .nav-item.active {
+    color: var(--mobile-secondary-color);
+}
+
+.mobile-view.dark-mode .mobile-header-button {
+    color: var(--mobile-secondary-color);
+}
+
+/* ===== RESPONSIVIDADE ===== */
+
+/* Smartphones pequenos */
+@media (max-width: 360px) {
+    .mobile-view .mobile-header-title {
         font-size: 16px;
     }
-    
-    .mobile-view .back-to-contacts {
-        width: 30px;
-        height: 30px;
-        font-size: 16px;
+
+    .mobile-view .contact-name {
+        font-size: 15px;
     }
-    
-    .mobile-view .message-input-container {
-        padding: 5px;
+
+    .mobile-view .message {
+        max-width: 85%;
+        font-size: 14px;
     }
 }
 
-/* Ajustes para tablets */
-@media (min-width: 481px) and (max-width: 768px) {
-    .mobile-view {
-        --header-height: 60px;
-        --footer-height: 60px;
+/* Smartphones grandes */
+@media (min-width: 400px) {
+    .mobile-view .contact-avatar {
+        width: 56px;
+        height: 56px;
     }
-    
-    .mobile-view .chat-header h2 {
-        font-size: 18px;
+
+    .mobile-view .contact-name {
+        font-size: 17px;
     }
 }
 
-/* Ajustes para orientação paisagem em dispositivos móveis */
-@media (max-height: 500px) and (orientation: landscape) {
+/* Tablets */
+@media (min-width: 768px) {
     .mobile-view {
-        --header-height: 40px;
-        --footer-height: 40px;
+        max-width: 480px;
+        margin: 0 auto;
+        border-left: 1px solid var(--mobile-border-color);
+        border-right: 1px solid var(--mobile-border-color);
     }
-    
-    .mobile-view .messages-container {
-        height: calc(100vh - var(--header-height) - var(--footer-height) - 40px);
+}
+
+/* Orientação paisagem */
+@media (orientation: landscape) and (max-height: 500px) {
+    .mobile-view {
+        --mobile-header-height: 48px;
+        --mobile-footer-height: 48px;
     }
-    
-    .mobile-view .mobile-nav {
-        height: var(--footer-height);
+
+    .mobile-view .call-avatar {
+        width: 70px;
+        height: 70px;
     }
-    
-    .mobile-view .nav-item i {
-        font-size: 16px;
-        margin-bottom: 2px;
+
+    .mobile-view .call-controls {
+        margin-top: 10px;
     }
-    
-    .mobile-view .nav-item {
-        font-size: 10px;
+
+    .mobile-view .call-button {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
     }
 }
